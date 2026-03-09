@@ -1,0 +1,25 @@
+
+> trendlensx@1.0.0 build
+> next build
+
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+  ▲ Next.js 14.2.35
+
+   Linting and checking validity of types ...
+Failed to compile.
+
+./src/components/Cards/AuthorCard.tsx:11:30
+Type error: Property 'social' does not exist on type 'Author'.
+
+[0m [90m  9 |[39m[0m
+[0m [90m 10 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mAuthorCard[39m({ author }[33m:[39m [33mAuthorCardProps[39m) {[0m
+[0m[31m[1m>[22m[39m[90m 11 |[39m   [36mconst[39m socialIcons [33m=[39m author[33m.[39msocial [33m||[39m {[0m
+[0m [90m    |[39m                              [31m[1m^[22m[39m[0m
+[0m [90m 12 |[39m     twitter[33m:[39m [32m''[39m[33m,[39m[0m
+[0m [90m 13 |[39m     linkedin[33m:[39m [32m''[39m[33m,[39m[0m
+[0m [90m 14 |[39m     github[33m:[39m [32m''[39m[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null

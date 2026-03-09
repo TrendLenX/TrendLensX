@@ -4,7 +4,7 @@ export interface Category {
   slug: string;
   description: string;
   color: string;
-  icon ? : string;
+  icon?: string;
 }
 
 export interface Author {
@@ -14,14 +14,14 @@ export interface Author {
   role: string
   bio: string
   image: string
-  email ? : string
-  twitter ? : string
-  linkedin ? : string
-  social ? : {
-    twitter ? : string
-    linkedin ? : string
-    github ? : string
-    website ? : string
+  email?: string
+  twitter?: string
+  linkedin?: string
+  social?: {
+    twitter?: string
+    linkedin?: string
+    github?: string
+    website?: string
   }
 }
 
@@ -33,14 +33,14 @@ export interface Post {
   content: string;
   coverImage: string;
   publishedAt: string;
-  updatedAt ? : string;
+  updatedAt?: string;
   authorId: string;
   category: Category;
   tags: string[];
   readTime: number;
-  readingTime ? : string;
-  wordCount ? : number;
-  featured ? : boolean;
+  readingTime?: string;
+  wordCount?: number;
+  featured?: boolean;
 }
 
 export interface Comment {
@@ -61,11 +61,11 @@ export interface NewsletterSubscriber {
 export interface SEOConfig {
   title: string;
   description: string;
-  canonical ? : string;
-  openGraph ? : {
-    title ? : string;
-    description ? : string;
-    images ? : { url: string;width ? : number;height ? : number;alt ? : string } [];
-    type ? : string;
+  canonical?: string;
+  openGraph?: {
+    title?: string;
+    description?: string;
+    images?: { url: string; width?: number; height?: number; alt?: string } [];
+    type?: string;
   };
 }

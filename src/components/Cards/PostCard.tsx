@@ -7,7 +7,7 @@ import { authors } from '@/data/authors';
 
 interface PostCardProps {
   post: Post;
-  featured ? : boolean;
+  featured?: boolean;
 }
 
 export default function PostCard({ post, featured = false }: PostCardProps) {
