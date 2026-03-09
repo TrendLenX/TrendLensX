@@ -6,6 +6,7 @@ import { authors } from '@/data/authors';
 import { getAllPosts } from '@/lib/mdxPosts';
 import { Author, Post } from '@/types';
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
 
 interface AuthorPageProps {
   author: Author;
@@ -13,6 +14,23 @@ interface AuthorPageProps {
 }
 
 export default function AuthorPage({ author, posts }: AuthorPageProps) {
+  const [postCount, setPostCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function loadCounts() {
+      try {
+        const res = await fetch('/api/author-post-counts');
+        if (!res.ok) return;
+        const data = (await res.json()) as Record<string, number>;
+        setPostCount(data[author.id] ?? null);
+      } catch {
+        // ignore
+      }
+    }
+
+    loadCounts();
+  }, [author.id]);
+
   return (
     <Layout>
       <Head>
@@ -36,6 +54,9 @@ export default function AuthorPage({ author, posts }: AuthorPageProps) {
               <div className="text-center md:text-left">
                 <h1 className="text-3xl font-bold mb-2">{author.name}</h1>
                 <p className="text-primary-600 font-medium mb-4">{author.role}</p>
+                <p className="text-gray-500 text-sm mb-4">
+                  {postCount !== null ? postCount : posts.length} articles
+                </p>
                 <p className="text-gray-600 text-lg leading-relaxed mb-6">
                   {author.bio}
                 </p>

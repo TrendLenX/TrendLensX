@@ -149,3 +149,11 @@ export function getFeaturedPosts(limit: number = 4): Post[] {
 export function getPostsByCategory(categorySlug: string): Post[] {
   return getAllPosts().filter((post) => post.category.slug === categorySlug);
 }
+
+export function getAuthorPostCounts(): Record<string, number> {
+  const counts: Record<string, number> = {};
+  getAllPosts().forEach((post) => {
+    counts[post.authorId] = (counts[post.authorId] || 0) + 1;
+  });
+  return counts;
+}

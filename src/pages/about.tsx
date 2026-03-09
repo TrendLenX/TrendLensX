@@ -1,12 +1,30 @@
-import Image from 'next/image';
+import { useEffect, useState } from 'react';
 import SEOHead from '@/components/SEO/SEOHead';
 import AuthorCard from '@/components/Cards/AuthorCard';
 import Newsletter from '@/components/Sections/Newsletter';
 import { authors } from '@/data/authors';
 import { SITE_CONFIG } from '@/lib/constants';
 import { Target, Users, Zap, Globe } from 'lucide-react';
+import { Author } from '@/types/author';
 
 export default function AboutPage() {
+  const [postCounts, setPostCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    async function loadCounts() {
+      try {
+        const res = await fetch('/api/author-post-counts');
+        if (!res.ok) return;
+        const data = (await res.json()) as Record<string, number>;
+        setPostCounts(data);
+      } catch {
+        // ignore network errors; fallback to 0
+      }
+    }
+
+    loadCounts();
+  }, []);
+
   const values = [
     { icon: Target, title: 'Accuracy', description: 'We verify every piece of information before publishing.' },
     { icon: Users, title: 'Community', description: 'Building a community of informed readers worldwide.' },
@@ -14,7 +32,12 @@ export default function AboutPage() {
     { icon: Globe, title: 'Diversity', description: 'Covering topics from across the globe and all walks of life.' },
   ];
 
-  const sortedAuthors = [...authors];
+  const authorsWithCounts: Author[] = authors.map((author) => ({
+    ...author,
+    postCount: postCounts[author.id] ?? 0,
+  }));
+
+  const sortedAuthors = [...authorsWithCounts];
 
   return (
     <>
@@ -75,3 +98,4 @@ export default function AboutPage() {
     </>
   );
 }
+

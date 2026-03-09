@@ -54,6 +54,9 @@ export default function AuthorCard({ author }: AuthorCardProps) {
           </h4>
         </Link>
         <p className="text-primary-600 font-semibold text-sm mb-2">{author.role}</p>
+        {typeof author.postCount === 'number' && (
+          <p className="text-gray-500 text-sm mb-2">{author.postCount} articles</p>
+        )}
         <p className="text-gray-600 text-sm mb-4">{author.bio}</p>
         <div className="flex justify-center sm:justify-start gap-2">
           {socialIcons.twitter && (

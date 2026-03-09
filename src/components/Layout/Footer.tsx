@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Facebook, Twitter, Linkedin, Instagram, Mail } from 'lucide-react';
 import { SITE_CONFIG, CATEGORIES, NAVIGATION } from '@/lib/constants';
 
@@ -9,9 +10,14 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
             <Link href="/" className="flex items-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">T</span>
-              </div>
+              <Image
+                src={SITE_CONFIG.logo}
+                alt={SITE_CONFIG.name}
+                width={1800}
+                height={540}
+                className="h-10 w-auto"
+                priority
+              />
               <span className="font-heading font-bold text-xl">{SITE_CONFIG.name}</span>
             </Link>
             <p className="text-gray-400 mb-4">{SITE_CONFIG.tagline}</p>
