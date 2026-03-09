@@ -91,7 +91,7 @@ export default function PostPage({ post, mdxSource }: PostPageProps) {
 
             <AdBanner slot="post-top" className="mb-8" />
 
-            <div className="prose prose-lg max-w-none mb-8">
+            <div className="prose prose-xl max-w-none mb-8 leading-relaxed">
               <MDXRemote {...mdxSource} />
             </div>
 

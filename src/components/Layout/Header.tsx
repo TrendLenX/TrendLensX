@@ -11,16 +11,16 @@ export default function Header() {
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
       <nav className="container-custom">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-20">
           
           {/* Logo Only (Text Removed) */}
           <Link href="/" className="flex items-center">
             <Image
               src={SITE_CONFIG.logo}
               alt={SITE_CONFIG.name}
-              width={170}
-              height={50}
-              className="h-10 w-auto"
+              width={1800}
+              height={540}
+              className="h-42 w-auto"
               priority
             />
           </Link>

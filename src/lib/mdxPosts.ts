@@ -106,13 +106,10 @@ export function getAllPosts(): Post[] {
 
 export function getPostBySlug(slug: string): Post | null {
   const mdxFiles = getMDXFiles();
-  const filename = mdxFiles.find((f) => f.includes(slug));
-
-  if (!filename) {
-    return null;
-  }
-
-  const { data, content } = parseMDXFile(filename);
+  
+  for (const filename of mdxFiles) {
+    const { data, content } = parseMDXFile(filename);
+    if (data.slug === slug) {
   const authorId = resolveAuthorId(data.authorId, data.author);
   const category = getCategoryBySlug(data.category);
   const cleaned = extractTextFromMDX(content);
@@ -137,6 +134,10 @@ export function getPostBySlug(slug: string): Post | null {
     wordCount,
     featured: data.featured || false,
   } as Post;
+    }
+  }
+
+  return null;
 }
 
 export function getFeaturedPosts(limit: number = 4): Post[] {
