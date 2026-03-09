@@ -1,10 +1,11 @@
+import { useEffect, useState } from 'react';
 import { GetStaticProps } from 'next';
 import Hero from '@/components/Sections/Hero';
 import Newsletter from '@/components/Sections/Newsletter';
 import PostCard from '@/components/Cards/PostCard';
 import CategoryCard from '@/components/Cards/CategoryCard';
 import SEOHead from '@/components/SEO/SEOHead';
-import { categories, getPostsByCategory } from '@/data/mockData';
+import { categories } from '@/data/mockData';
 import { getAllPosts, getFeaturedPosts } from '@/lib/mdxPosts';
 import { SITE_CONFIG } from '@/lib/constants';
 import { ArrowRight } from 'lucide-react';
@@ -17,7 +18,23 @@ interface HomeProps {
 }
 
 export default function Home({ featuredPosts, latestPosts }: HomeProps) {
-  
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    async function loadCounts() {
+      try {
+        const res = await fetch('/api/category-post-counts');
+        if (!res.ok) return;
+        const data = (await res.json()) as Record<string, number>;
+        setCategoryCounts(data);
+      } catch {
+        // ignore network errors; counts will default to 0
+      }
+    }
+
+    loadCounts();
+  }, []);
+
   // Fallback gracefully if no featured posts exist
   const hasFeaturedPosts = featuredPosts.length > 0;
 
@@ -70,7 +87,7 @@ export default function Home({ featuredPosts, latestPosts }: HomeProps) {
               <CategoryCard
                 key={category.id}
                 category={category}
-                postCount={getPostsByCategory(category.slug).length}
+                postCount={categoryCounts[category.slug] ?? 0}
               />
             ))}
           </div>

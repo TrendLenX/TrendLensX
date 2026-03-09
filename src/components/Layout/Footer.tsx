@@ -9,16 +9,15 @@ export default function Footer() {
       <div className="container-custom py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
-            <Link href="/" className="flex items-center space-x-2 mb-4">
+            <Link href="/" className="flex items-center mb-4">
               <Image
                 src={SITE_CONFIG.logo}
                 alt={SITE_CONFIG.name}
                 width={1800}
                 height={540}
-                className="h-10 w-auto"
+                className="h-28 w-auto"
                 priority
               />
-              <span className="font-heading font-bold text-xl">{SITE_CONFIG.name}</span>
             </Link>
             <p className="text-gray-400 mb-4">{SITE_CONFIG.tagline}</p>
             <div className="flex space-x-4">
