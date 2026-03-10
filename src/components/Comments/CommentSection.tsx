@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { MessageSquare, Send } from 'lucide-react';
 
 interface Comment {
@@ -6,6 +7,7 @@ interface Comment {
   author: string;
   content: string;
   createdAt: string;
+  postId: string;
 }
 
 interface CommentSectionProps {
@@ -16,6 +18,25 @@ export default function CommentSection({ postId }: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState({ name: '', email: '', content: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { data: session } = useSession();
+
+  // Pre-fill form with user data if logged in
+  useEffect(() => {
+    if (session?.user) {
+      setNewComment(prev => ({
+        ...prev,
+        name: session.user?.name || '',
+        email: session.user?.email || '',
+      }));
+    }
+  }, [session]);
+
+  // Save comments to localStorage whenever comments change
+  useEffect(() => {
+    if (comments.length > 0) {
+      localStorage.setItem(`comments-${postId}`, JSON.stringify(comments));
+    }
+  }, [comments, postId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +47,7 @@ export default function CommentSection({ postId }: CommentSectionProps) {
       author: newComment.name,
       content: newComment.content,
       createdAt: new Date().toISOString(),
+      postId,
     };
     
     setComments([...comments, comment]);
@@ -41,24 +63,31 @@ export default function CommentSection({ postId }: CommentSectionProps) {
       </h3>
 
       <form onSubmit={handleSubmit} className="mb-8 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="Your Name"
-            value={newComment.name}
-            onChange={(e) => setNewComment({ ...newComment, name: e.target.value })}
-            required
-            className="input-field"
-          />
-          <input
-            type="email"
-            placeholder="Your Email"
-            value={newComment.email}
-            onChange={(e) => setNewComment({ ...newComment, email: e.target.value })}
-            required
-            className="input-field"
-          />
-        </div>
+        {!session && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="Your Name"
+              value={newComment.name}
+              onChange={(e) => setNewComment({ ...newComment, name: e.target.value })}
+              required
+              className="input-field"
+            />
+            <input
+              type="email"
+              placeholder="Your Email"
+              value={newComment.email}
+              onChange={(e) => setNewComment({ ...newComment, email: e.target.value })}
+              required
+              className="input-field"
+            />
+          </div>
+        )}
+        {session && (
+          <div className="text-sm text-gray-600 mb-4">
+            Commenting as <span className="font-medium">{session.user?.name}</span>
+          </div>
+        )}
         <textarea
           placeholder="Write your comment..."
           value={newComment.content}

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, Menu, X, ChevronDown } from 'lucide-react';
+import { Search, Menu, X, ChevronDown, User, LogOut } from 'lucide-react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 import { SITE_CONFIG, NAVIGATION } from '@/lib/constants';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { data: session, status } = useSession();
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -73,9 +75,54 @@ export default function Header() {
             >
               <Search className="w-5 h-5" />
             </Link>
-            <Link href="/contact" className="btn-primary text-sm">
-              Subscribe
-            </Link>
+
+            {status === 'loading' ? (
+              <div className="text-sm text-gray-500">Loading...</div>
+            ) : session ? (
+              <div className="relative">
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="flex items-center space-x-2 p-2 text-gray-600 hover:text-primary-600 transition-colors"
+                >
+                  <User className="w-5 h-5" />
+                  <span className="text-sm">{session.user?.name}</span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 border border-gray-100 z-50">
+                    {session.user?.role === 'admin' && (
+                      <Link
+                        href="/admin/users"
+                        className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-primary-600"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        Admin Panel
+                      </Link>
+                    )}
+                    <button
+                      onClick={() => {
+                        signOut();
+                        setDropdownOpen(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-primary-600"
+                    >
+                      <LogOut className="w-4 h-4 inline mr-2" />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link href="/auth/signin" className="text-gray-600 hover:text-primary-600 transition-colors text-sm">
+                  Sign In
+                </Link>
+                <Link href="/auth/signup" className="btn-primary text-sm">
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -123,6 +170,55 @@ export default function Header() {
                 )}
               </div>
             ))}
+
+            {/* Mobile Auth Links */}
+            <div className="border-t pt-4 mt-4">
+              {status === 'loading' ? (
+                <div className="px-4 py-2 text-sm text-gray-500">Loading...</div>
+              ) : session ? (
+                <>
+                  <div className="px-4 py-2 text-sm font-medium text-gray-900">
+                    {session.user?.name}
+                  </div>
+                  {session.user?.role === 'admin' && (
+                    <Link
+                      href="/admin/users"
+                      className="block px-4 py-2 text-gray-600 hover:text-primary-600"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Admin Panel
+                    </Link>
+                  )}
+                  <button
+                    onClick={() => {
+                      signOut();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-gray-600 hover:text-primary-600"
+                  >
+                    <LogOut className="w-4 h-4 inline mr-2" />
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/auth/signin"
+                    className="block px-4 py-2 text-gray-600 hover:text-primary-600"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/auth/signup"
+                    className="block px-4 py-2 text-gray-600 hover:text-primary-600"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Sign Up
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         )}
       </nav>

@@ -2,13 +2,14 @@ import type { AppProps } from 'next/app';
 import Head from 'next/head';
 import { DefaultSeo } from 'next-seo';
 import { Analytics } from '@vercel/analytics/next';
+import { SessionProvider } from 'next-auth/react';
 import Layout from '@/components/Layout/Layout';
 import { SITE_CONFIG } from '@/lib/constants';
 import '@/styles/globals.css';
 
-export default function App({ Component, pageProps }: AppProps) {
+export default function App({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   return (
-    <>
+    <SessionProvider session={session}>
       <Head>
         <link rel="icon" href={SITE_CONFIG.favicon} />
       </Head>
@@ -32,6 +33,6 @@ export default function App({ Component, pageProps }: AppProps) {
         <Component {...pageProps} />
       </Layout>
       <Analytics />
-    </>
+    </SessionProvider>
   );
 }
