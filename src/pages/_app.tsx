@@ -1,4 +1,5 @@
 import type { AppProps } from 'next/app';
+import Head from 'next/head';
 import { DefaultSeo } from 'next-seo';
 import { Analytics } from '@vercel/analytics/next';
 import Layout from '@/components/Layout/Layout';
@@ -8,6 +9,9 @@ import '@/styles/globals.css';
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <>
+      <Head>
+        <link rel="icon" href={SITE_CONFIG.favicon} />
+      </Head>
       <DefaultSeo
         titleTemplate={`%s | ${SITE_CONFIG.name}`}
         defaultTitle={SITE_CONFIG.name}

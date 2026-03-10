@@ -2,7 +2,7 @@ export const SITE_CONFIG = {
   name: 'TrendLensX',
   tagline: 'Your Lens to Trending Topics',
   description: 'Discover the latest trends in News, Finance, Technology, Education, Sports, Lifestyle, Jobs, and Scholarships.',
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://trendlensx.com',
+  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://trendlensx.vercel.app',
   logo: '/images/branding/logo1.png',
   favicon: '/favicon.ico',
   ogImage: '/images/branding/logo1.png',
@@ -13,7 +13,7 @@ export const SITE_CONFIG = {
     instagram: 'https://instagram.com/trendlensx',
   },
   contact: {
-    email: 'hello@trendlensx.com',
+    email: 'info.trendlensx@gmail.com',
     phone: '+1 (555) 123-4567',
     address: '123 Trend Street, Innovation City, IC 12345',
   },

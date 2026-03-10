@@ -33,6 +33,16 @@ export default function PostPage({ post, mdxSource }: PostPageProps) {
         canonical={`/post/${post.slug}`}
         ogImage={post.coverImage}
         ogType="article"
+        isPost={true}
+        hashtags={[post.category.name, ...post.tags]}
+        postData={{
+          slug: post.slug,
+          category: post.category.slug,
+          tags: post.tags,
+          publishedAt: post.publishedAt,
+          updatedAt: post.updatedAt,
+          author: author.name,
+        }}
       />
 
       <article className="py-8">

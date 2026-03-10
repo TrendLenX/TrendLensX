@@ -15,7 +15,7 @@ export default function Footer() {
                 alt={SITE_CONFIG.name}
                 width={1800}
                 height={540}
-                className="h-28 w-auto"
+                className="h-84 w-auto drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]"
                 priority
               />
             </Link>

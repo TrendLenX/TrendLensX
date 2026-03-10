@@ -1,6 +1,5 @@
 import { GetStaticPaths, GetStaticProps } from 'next';
-import Head from 'next/head';
-import Layout from '@/components/Layout/Layout';
+import SEOHead from '@/components/SEO/SEOHead';
 import PostCard from '@/components/Cards/PostCard';
 import { authors } from '@/data/authors';
 import { getAllPosts } from '@/lib/mdxPosts';
@@ -32,11 +31,12 @@ export default function AuthorPage({ author, posts }: AuthorPageProps) {
   }, [author.id]);
 
   return (
-    <Layout>
-      <Head>
-        <title>{author.name} - Author Profile | TrendLensX</title>
-        <meta name="description" content={author.bio} />
-      </Head>
+    <>
+      <SEOHead
+        title={`${author.name} - Author Profile`}
+        description={author.bio}
+        canonical={`/author/${author.slug}`}
+      />
 
       <div className="py-12">
         <div className="container-custom">
@@ -86,7 +86,7 @@ export default function AuthorPage({ author, posts }: AuthorPageProps) {
           </div>
         </div>
       </div>
-    </Layout>
+    </>
   );
 }
 

@@ -44,6 +44,8 @@ export default function Home({ featuredPosts, latestPosts }: HomeProps) {
         title="Home"
         description={SITE_CONFIG.description}
         canonical="/"
+        ogImage={SITE_CONFIG.logo}
+        ogType="website"
       />
       
       <Hero />
