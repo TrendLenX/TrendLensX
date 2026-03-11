@@ -157,3 +157,32 @@ export function getAuthorPostCounts(): Record<string, number> {
   });
   return counts;
 }
+
+export function getRelatedPosts(currentPostId: string, tags: string[], categorySlug: string, limit: number = 4): Post[] {
+  const allPosts = getAllPosts();
+  
+  // Filter out the current post
+  const otherPosts = allPosts.filter(post => post.id !== currentPostId);
+  
+  // Score posts based on relevance
+  const scoredPosts = otherPosts.map(post => {
+    let score = 0;
+    
+    // Same category gets high score
+    if (post.category.slug === categorySlug) {
+      score += 10;
+    }
+    
+    // Shared tags get points
+    const sharedTags = post.tags.filter(tag => tags.includes(tag));
+    score += sharedTags.length * 5;
+    
+    return { post, score };
+  });
+  
+  // Sort by score (descending) and return top posts
+  return scoredPosts
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(item => item.post);
+}

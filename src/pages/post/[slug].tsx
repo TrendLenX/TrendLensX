@@ -8,7 +8,12 @@ import AuthorCard from '@/components/Cards/AuthorCard';
 import ShareButtons from '@/components/Social/ShareButtons';
 import CommentSection from '@/components/Comments/CommentSection';
 import AdBanner from '@/components/Ads/AdBanner';
-import { getAllPosts, getPostBySlug } from '@/lib/mdxPosts';
+import ReadingProgressBar from '@/components/ReadingProgressBar';
+import ArticleClapButton from '@/components/ArticleClapButton';
+import BookmarkButton from '@/components/BookmarkButton';
+import EstimatedReadingTime from '@/components/EstimatedReadingTime';
+import RelatedPosts from '@/components/RelatedPosts';
+import { getAllPosts, getPostBySlug, getRelatedPosts } from '@/lib/mdxPosts';
 import { Post } from '@/types';
 import { formatDate, getCategoryColor } from '@/lib/utils';
 import { SITE_CONFIG } from '@/lib/constants';
@@ -17,9 +22,10 @@ import { authors } from '@/data/authors';
 interface PostPageProps {
   post: Post;
   mdxSource: MDXRemoteSerializeResult;
+  relatedPosts: Post[];
 }
 
-export default function PostPage({ post, mdxSource }: PostPageProps) {
+export default function PostPage({ post, mdxSource, relatedPosts }: PostPageProps) {
   const author = authors.find(a => a.id === post.authorId);
   const postUrl = `${SITE_CONFIG.url}/post/${post.slug}`;
 
@@ -46,6 +52,7 @@ export default function PostPage({ post, mdxSource }: PostPageProps) {
       />
 
       <article className="py-8">
+        <ReadingProgressBar />
         <div className="container-custom">
           <Link
             href={`/category/${post.category.slug}`}
@@ -81,12 +88,16 @@ export default function PostPage({ post, mdxSource }: PostPageProps) {
                   {formatDate(post.publishedAt)}
                 </span>
                 <span className="flex items-center">
-                  <Clock className="w-4 h-4 mr-1" />
-                  {post.readingTime}
+                  <EstimatedReadingTime minutes={post.readTime} />
                 </span>
               </div>
 
               <ShareButtons url={postUrl} title={post.title} description={post.excerpt} />
+
+              <div className="flex items-center gap-4 mt-6">
+                <ArticleClapButton postId={post.id} />
+                <BookmarkButton postId={post.id} />
+              </div>
             </header>
 
             <div className="relative h-64 md:h-96 rounded-xl overflow-hidden mb-8">
@@ -122,6 +133,8 @@ export default function PostPage({ post, mdxSource }: PostPageProps) {
               <AuthorCard author={author} />
             </div>
 
+            <RelatedPosts posts={relatedPosts} />
+
             <CommentSection postId={post.id} />
           </div>
         </div>
@@ -149,11 +162,13 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
   }
 
   const mdxSource = await serialize(post.content);
+  const relatedPosts = getRelatedPosts(post.id, post.tags, post.category.slug);
 
   return {
     props: { 
       post: JSON.parse(JSON.stringify(post)), 
-      mdxSource 
+      mdxSource,
+      relatedPosts: JSON.parse(JSON.stringify(relatedPosts))
     },
   };
 };

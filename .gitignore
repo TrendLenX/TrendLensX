@@ -49,3 +49,4 @@ next-env.d.ts
 # Sitemaps (generated)
 public/sitemap*.xml
 public/robots.txt
+/src/generated/prisma

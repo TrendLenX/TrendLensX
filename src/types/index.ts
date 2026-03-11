@@ -25,6 +25,20 @@ export interface Author {
   }
 }
 
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  image?: string;
+  role?: string;
+  bio?: string;
+  location?: string;
+  website?: string;
+  joinedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Post {
   id: string;
   title: string;

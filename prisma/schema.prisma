@@ -1,0 +1,279 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  follows        Follow[]        @relation("UserFollows")
+  claps          Clap[]
+  bookmarks      Bookmark[]
+  comments       Comment[]
+  newsletterSubs NewsletterSub[]
+  readingGoals   ReadingGoal[]
+  achievements   UserAchievement[]
+  readingSessions ReadingSession[]
+
+  @@map("users")
+}
+
+model Author {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  role        String?
+  bio         String?
+  image       String?
+  email       String?  @unique
+  twitter     String?
+  linkedin    String?
+  github      String?
+  website     String?
+  followerCount Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  posts       Post[]
+  follows     Follow[]
+  newsletterSubs NewsletterSub[]
+
+  @@map("authors")
+}
+
+model Post {
+  id            String   @id @default(cuid())
+  title         String
+  slug          String   @unique
+  excerpt       String
+  content       String?  // MDX content or reference
+  coverImage    String?
+  publishedAt   DateTime
+  updatedAt     DateTime @updatedAt
+  readTime      Int
+  wordCount     Int?
+  featured      Boolean  @default(false)
+  views         Int      @default(0)
+  clapCount     Int      @default(0)
+  shares        Int      @default(0)
+  commentsCount Int      @default(0)
+
+  // Relations
+  authorId      String
+  author        Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  categoryId    String
+  category      Category @relation(fields: [categoryId], references: [id])
+  tags          Tag[]
+  clapRecords   Clap[]
+  bookmarks     Bookmark[]
+  comments      Comment[]
+  analytics     PostAnalytics[]
+  readingSessions ReadingSession[]
+
+  @@map("posts")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  color       String?
+  icon        String?
+  postCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  posts       Post[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id    String @id @default(cuid())
+  name  String @unique
+  slug  String @unique
+  color String?
+
+  // Relations
+  posts Post[]
+
+  @@map("tags")
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  follower    User     @relation("UserFollows", fields: [followerId], references: [id], onDelete: Cascade)
+  following   Author   @relation(fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+model Clap {
+  id     String @id @default(cuid())
+  userId String
+  postId String
+  count  Int    @default(1)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@map("claps")
+}
+
+model Bookmark {
+  id     String @id @default(cuid())
+  userId String
+  postId String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@map("bookmarks")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  postId    String
+  parentId  String?
+  likes     Int      @default(0)
+  approved  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post     Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
+
+  @@map("comments")
+}
+
+model PostAnalytics {
+  id            String   @id @default(cuid())
+  postId        String
+  date          DateTime @default(now())
+  views         Int      @default(0)
+  readComplete  Int      @default(0)
+  avgReadTime   Float?
+  socialShares  Int      @default(0)
+
+  // Relations
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, date])
+  @@map("post_analytics")
+}
+
+model NewsletterSub {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  userId    String?
+  authorId  String?
+  frequency String   @default("weekly") // daily, weekly, monthly
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  author Author? @relation(fields: [authorId], references: [id])
+
+  @@map("newsletter_subs")
+}
+model ReadingGoal {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // daily, weekly, monthly
+  target      Int      // number of articles or minutes
+  metric      String   // articles, minutes
+  current     Int      @default(0)
+  completed   Boolean  @default(false)
+  startDate   DateTime
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reading_goals")
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  icon        String
+  category    String   // reading, engagement, streak, milestone
+  requirement Int      // threshold to unlock
+  metric      String   // articles_read, minutes_read, streak_days, etc.
+  rarity      String   @default("common") // common, rare, epic, legendary
+  points      Int      @default(10)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model ReadingSession {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  startTime DateTime
+  endTime   DateTime?
+  duration  Int?     // in minutes
+  completed Boolean  @default(false)
+  progress  Float    @default(0) // 0-1 percentage
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("reading_sessions")
+}
