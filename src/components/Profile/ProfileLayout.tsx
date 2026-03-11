@@ -13,6 +13,7 @@ import {
   Users,
   Target,
   Trophy,
+  Crown,
 } from 'lucide-react';
 import { User as UserType } from '@/types';
 
@@ -29,6 +30,7 @@ const navigation = [
   { name: 'Following', href: '/profile/following', icon: Users },
   { name: 'Reading Goals', href: '/profile/goals', icon: Target },
   { name: 'Achievements', href: '/profile/achievements', icon: Trophy },
+  { name: 'Subscriptions', href: '/profile/subscriptions', icon: Crown },
   { name: 'Reading Stats', href: '/profile/stats', icon: TrendingUp },
   { name: 'Settings', href: '/profile/settings', icon: Settings },
 ];

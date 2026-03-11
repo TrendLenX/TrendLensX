@@ -27,6 +27,7 @@ model User {
   readingGoals   ReadingGoal[]
   achievements   UserAchievement[]
   readingSessions ReadingSession[]
+  subscriptions  UserSubscription[]
 
   @@map("users")
 }
@@ -83,6 +84,7 @@ model Post {
   comments      Comment[]
   analytics     PostAnalytics[]
   readingSessions ReadingSession[]
+  premiumContent PremiumContent?
 
   @@map("posts")
 }
@@ -276,4 +278,75 @@ model ReadingSession {
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@map("reading_sessions")
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(cuid())
+  name        String   // Basic, Premium, Pro
+  description String?
+  price       Float    // Monthly price in USD
+  currency    String   @default("USD")
+  interval    String   @default("month") // month, year
+  features    String[] // JSON array of features
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  subscriptions UserSubscription[]
+
+  @@map("subscription_plans")
+}
+
+model UserSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  planId     String
+  status     String   @default("active") // active, canceled, expired, past_due
+  startDate  DateTime
+  endDate    DateTime?
+  autoRenew  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan SubscriptionPlan @relation(fields: [planId], references: [id])
+  payments Payment[]
+
+  @@unique([userId, planId])
+  @@map("user_subscriptions")
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  userId        String
+  subscriptionId String?
+  amount        Float
+  currency      String   @default("USD")
+  status        String   @default("pending") // pending, completed, failed, refunded
+  paymentMethod String   // stripe, paypal, etc.
+  transactionId String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription UserSubscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@map("payments")
+}
+
+model PremiumContent {
+  id          String   @id @default(cuid())
+  postId      String   @unique
+  isPremium   Boolean  @default(false)
+  previewText String?  // Preview content for non-premium users
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("premium_content")
 }
