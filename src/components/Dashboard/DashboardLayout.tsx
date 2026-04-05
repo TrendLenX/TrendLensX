@@ -13,10 +13,13 @@ import {
   Mail,
   DollarSign
 } from 'lucide-react';
-import { Author } from '@/types';
 
 interface DashboardLayoutProps {
-  author: Author;
+  author: {
+    name?: string;
+    image?: string | null;
+    role?: string | null;
+  };
   children: React.ReactNode;
 }
 

@@ -73,6 +73,7 @@ export default function Newsletter() {
               className="px-8 py-4 bg-white text-primary-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
             >
               {status === 'loading' ? 'Subscribing...' : 'Subscribe'}
+            </button>
           </form>
         )}
       </div>

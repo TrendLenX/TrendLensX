@@ -1,11 +1,9 @@
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/pages/api/auth/[...nextauth]';
-import { PrismaClient } from '@prisma/client';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import { User } from '@/types';
-
-const prisma = new PrismaClient();
 
 interface NewsletterPageProps {
   user: User;
@@ -18,7 +16,7 @@ interface NewsletterPageProps {
 
 export default function NewsletterPage({ user, stats }: NewsletterPageProps) {
   return (
-    <DashboardLayout user={user}>
+    <DashboardLayout author={user}>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Newsletter Management</h1>

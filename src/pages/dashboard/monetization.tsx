@@ -1,12 +1,10 @@
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/pages/api/auth/[...nextauth]';
-import { PrismaClient } from '@prisma/client';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import SubscriptionPlans from '@/components/Monetization/SubscriptionPlans';
 import { User } from '@/types';
-
-const prisma = new PrismaClient();
 
 interface MonetizationPageProps {
   user: User;
@@ -20,7 +18,7 @@ interface MonetizationPageProps {
 
 export default function MonetizationPage({ user, stats }: MonetizationPageProps) {
   return (
-    <DashboardLayout user={user}>
+    <DashboardLayout author={user}>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Monetization Dashboard</h1>

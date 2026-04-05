@@ -1,13 +1,11 @@
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/pages/api/auth/[...nextauth]';
-import { PrismaClient } from '@prisma/client';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import ProfileLayout from '@/components/Profile/ProfileLayout';
 import UserSubscriptions from '@/components/Monetization/UserSubscriptions';
 import SubscriptionPlans from '@/components/Monetization/SubscriptionPlans';
 import { User } from '@/types';
-
-const prisma = new PrismaClient();
 
 interface SubscriptionsPageProps {
   user: User;

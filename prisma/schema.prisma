@@ -28,6 +28,7 @@ model User {
   achievements   UserAchievement[]
   readingSessions ReadingSession[]
   subscriptions  UserSubscription[]
+  payments       Payment[]
 
   @@map("users")
 }

@@ -1,12 +1,10 @@
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import ProfileLayout from '@/components/Profile/ProfileLayout';
 import ProgressTracker from '@/components/Profile/ProgressTracker';
 import { User } from '@/types';
-
-const prisma = new PrismaClient();
 
 interface StatsPageProps {
   user: User;
