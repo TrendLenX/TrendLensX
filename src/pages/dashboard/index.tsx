@@ -1,5 +1,5 @@
 import { GetServerSideProps } from 'next';
-import { createServerClient } from '@supabase/auth-helpers-nextjs'; // ✅ updated import
+import { createServerClient } from '@supabase/auth-helpers-nextjs';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import AnalyticsOverview from '@/components/Dashboard/AnalyticsOverview';
 import RecentPosts from '@/components/Dashboard/RecentPosts';
@@ -45,11 +45,28 @@ export default function Dashboard({ author, stats, recentPosts, audienceData }: 
 }
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  // ✅ Correct usage: pass URL, anon key, and req/res
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { req: ctx.req, res: ctx.res }
+    {
+      cookies: {
+        get(name: string) {
+          return ctx.req.cookies[name];
+        },
+        set(name: string, value: string, options: any) {
+          ctx.res.setHeader(
+            'Set-Cookie',
+            `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`
+          );
+        },
+        remove(name: string, options: any) {
+          ctx.res.setHeader(
+            'Set-Cookie',
+            `${name}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`
+          );
+        },
+      },
+    }
   );
 
   const {
