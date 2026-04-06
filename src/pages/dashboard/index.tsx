@@ -1,5 +1,5 @@
 import { GetServerSideProps } from 'next';
-import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/auth-helpers-nextjs'; // ✅ updated import
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import AnalyticsOverview from '@/components/Dashboard/AnalyticsOverview';
 import RecentPosts from '@/components/Dashboard/RecentPosts';
@@ -45,7 +45,7 @@ export default function Dashboard({ author, stats, recentPosts, audienceData }: 
 }
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const supabase = createServerSupabaseClient(ctx);
+  const supabase = createServerClient(ctx); // ✅ updated usage
   const {
     data: { session },
   } = await supabase.auth.getSession();
