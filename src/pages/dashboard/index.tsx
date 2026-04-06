@@ -45,7 +45,13 @@ export default function Dashboard({ author, stats, recentPosts, audienceData }: 
 }
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const supabase = createServerClient(ctx); // ✅ updated usage
+  // ✅ Correct usage: pass URL, anon key, and req/res
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { req: ctx.req, res: ctx.res }
+  );
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
