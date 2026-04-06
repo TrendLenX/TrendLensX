@@ -1,10 +1,10 @@
 import { GetServerSideProps } from 'next';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import AnalyticsOverview from '@/components/Dashboard/AnalyticsOverview';
 import RecentPosts from '@/components/Dashboard/RecentPosts';
 import AudienceInsights from '@/components/Dashboard/AudienceInsights';
+import { prisma } from '@/lib/prisma';
 import { Author } from '@/types';
 
 interface DashboardProps {
@@ -28,7 +28,9 @@ export default function Dashboard({ author, stats, recentPosts, audienceData }: 
       <div className="space-y-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-2">Welcome back, {author.name}! Here's your content performance overview.</p>
+          <p className="text-gray-600 mt-2">
+            Welcome back, {author.name}! Here's your content performance overview.
+          </p>
         </div>
 
         <AnalyticsOverview stats={stats} />
@@ -42,96 +44,77 @@ export default function Dashboard({ author, stats, recentPosts, audienceData }: 
   );
 }
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  try {
-    const session = await getServerSession(context.req, context.res, authOptions);
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const supabase = createServerSupabaseClient(ctx);
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-    if (!session?.user?.email) {
-      return {
-        redirect: {
-          destination: '/auth/signin',
-          permanent: false,
-        },
-      };
-    }
-
-    // For demo purposes, return mock data if database is not available
-    const mockAuthor = {
-      id: 'demo-author',
-      name: 'Demo Author',
-      slug: 'demo-author',
-      role: 'Author',
-      bio: 'Demo author for TrendLensX',
-      image: '/images/authors/default.jpg',
-      email: session.user.email,
-    };
-
-    const mockStats = {
-      totalPosts: 5,
-      totalViews: 1250,
-      totalClaps: 89,
-      totalFollowers: 42,
-      avgReadTime: 4,
-      recentViews: 150,
-      recentClaps: 12,
-    };
-
-    const mockRecentPosts = [
-      {
-        id: '1',
-        title: 'Sample Article 1',
-        slug: 'sample-article-1',
-        excerpt: 'This is a sample article excerpt...',
-        publishedAt: new Date().toISOString(),
-        views: 450,
-        clapCount: 23,
-        category: { name: 'Technology', slug: 'technology' },
-        _count: { clapRecords: 23, bookmarks: 5, comments: 3 },
-      },
-    ];
-
-    const mockAudienceData = [
-      { month: 'Jan 2024', followers: 12 },
-      { month: 'Feb 2024', followers: 18 },
-      { month: 'Mar 2024', followers: 25 },
-      { month: 'Apr 2024', followers: 32 },
-      { month: 'May 2024', followers: 38 },
-      { month: 'Jun 2024', followers: 42 },
-    ];
-
+  if (!session?.user) {
     return {
-      props: {
-        author: mockAuthor,
-        stats: mockStats,
-        recentPosts: mockRecentPosts,
-        audienceData: mockAudienceData,
-      },
-    };
-  } catch (error) {
-    // Fallback for demo/development
-    return {
-      props: {
-        author: {
-          id: 'demo-author',
-          name: 'Demo Author',
-          slug: 'demo-author',
-          role: 'Author',
-          bio: 'Demo author for TrendLensX',
-          image: '/images/authors/default.jpg',
-          email: 'demo@example.com',
-        },
-        stats: {
-          totalPosts: 0,
-          totalViews: 0,
-          totalClaps: 0,
-          totalFollowers: 0,
-          avgReadTime: 0,
-          recentViews: 0,
-          recentClaps: 0,
-        },
-        recentPosts: [],
-        audienceData: [],
+      redirect: {
+        destination: '/auth/signin',
+        permanent: false,
       },
     };
   }
+
+  // Fetch the user profile from Prisma
+  const author = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    include: {
+      posts: {
+        orderBy: { publishedAt: 'desc' },
+        take: 5,
+      },
+      followers: true,
+      clapRecords: true,
+    },
+  });
+
+  if (!author) {
+    return {
+      redirect: {
+        destination: '/auth/signin',
+        permanent: false,
+      },
+    };
+  }
+
+  // Calculate stats
+  const stats = {
+    totalPosts: author.posts.length,
+    totalViews: author.posts.reduce((sum, post) => sum + (post.views || 0), 0),
+    totalClaps: author.clapRecords.length,
+    totalFollowers: author.followers.length,
+    avgReadTime:
+      author.posts.length > 0
+        ? Math.round(
+            author.posts.reduce((sum, post) => sum + (post.readTime || 0), 0) /
+              author.posts.length
+          )
+        : 0,
+    recentViews: author.posts.slice(0, 5).reduce((sum, post) => sum + (post.views || 0), 0),
+    recentClaps: author.posts.slice(0, 5).reduce((sum, post) => sum + (post.clapCount || 0), 0),
+  };
+
+  // Audience data example: group followers by month
+  const audienceData = await prisma.follower.groupBy({
+    by: ['createdAt'],
+    _count: { id: true },
+  });
+
+  const formattedAudienceData = audienceData.map((entry) => ({
+    month: new Date(entry.createdAt).toLocaleString('default', { month: 'short', year: 'numeric' }),
+    followers: entry._count.id,
+  }));
+
+  return {
+    props: {
+      author,
+      stats,
+      recentPosts: author.posts,
+      audienceData: formattedAudienceData,
+    },
+  };
 };

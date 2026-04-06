@@ -1,40 +1,54 @@
 import { useState } from 'react';
-import { signIn, getSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import SEOHead from '@/components/SEO/SEOHead';
+import { supabase } from '@/lib/supabase';
+import { useUser } from '@/context/UserContext'; // import context
 
 export default function SignIn() {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { setUser } = useUser(); // get context setter
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    const result = await signIn('credentials', {
+    // Step 1: Login with Supabase Auth
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email: credentials.email,
       password: credentials.password,
-      redirect: false,
     });
 
-    if (result?.error) {
+    if (signInError) {
       setError('Invalid credentials');
       setLoading(false);
-    } else {
-      router.push('/');
+      return;
     }
+
+    const supabaseUser = data.user;
+
+    // Step 2: Fetch extended profile from Prisma via API route
+    try {
+      const response = await fetch(`/api/users/profile?id=${supabaseUser?.id}`);
+      if (response.ok) {
+        const profile = await response.json();
+        setUser(profile); // store in Context
+      }
+    } catch (err) {
+      console.error('Failed to fetch extended profile', err);
+    }
+
+    router.push('/');
+    setLoading(false);
   };
 
   return (
     <>
-      <SEOHead
-        title="Sign In"
-        description="Sign in to your TrendLensX account"
-      />
+      <SEOHead title="Sign In" description="Sign in to your TrendLensX account" />
 
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
@@ -96,21 +110,4 @@ export default function SignIn() {
       </div>
     </>
   );
-}
-
-export async function getServerSideProps(context: any) {
-  const session = await getSession(context);
-
-  if (session) {
-    return {
-      redirect: {
-        destination: '/',
-        permanent: false,
-      },
-    };
-  }
-
-  return {
-    props: {},
-  };
 }
