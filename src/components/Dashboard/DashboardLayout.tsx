@@ -5,42 +5,41 @@ import {
   BarChart3,
   FileText,
   Users,
-  TrendingUp,
   Settings,
   LogOut,
   Home,
   PenTool,
   Mail,
-  DollarSign
+  DollarSign,
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
   author: {
-    name?: string;
-    image?: string | null;
-    role?: string | null;
+    name ? : string;
+    image ? : string | null;
+    role ? : string | null;
   };
   children: React.ReactNode;
 }
 
 const navigation = [
-  { name: 'Overview', href: '/dashboard', icon: Home },
-  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-  { name: 'Posts', href: '/dashboard/posts', icon: FileText },
-  { name: 'Audience', href: '/dashboard/audience', icon: Users },
-  { name: 'Write', href: '/dashboard/write', icon: PenTool },
-  { name: 'Newsletter', href: '/dashboard/newsletter', icon: Mail },
-  { name: 'Monetization', href: '/dashboard/monetization', icon: DollarSign },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { name: 'Overview', href: '/dashboard', icon: Home, roles: ['USER', 'AUTHOR', 'ADMIN'] },
+  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, roles: ['AUTHOR', 'ADMIN'] },
+  { name: 'Posts', href: '/dashboard/posts', icon: FileText, roles: ['AUTHOR', 'ADMIN'] },
+  { name: 'Audience', href: '/dashboard/audience', icon: Users, roles: ['AUTHOR', 'ADMIN'] },
+  { name: 'Write', href: '/dashboard/write', icon: PenTool, roles: ['AUTHOR'] },
+  { name: 'Newsletter', href: '/dashboard/newsletter', icon: Mail, roles: ['AUTHOR', 'ADMIN'] },
+  { name: 'Monetization', href: '/dashboard/monetization', icon: DollarSign, roles: ['AUTHOR', 'ADMIN'] },
+  { name: 'Settings', href: '/dashboard/settings', icon: Settings, roles: ['USER', 'AUTHOR', 'ADMIN'] },
 ];
 
 export default function DashboardLayout({ author, children }: DashboardLayoutProps) {
   const router = useRouter();
-
+  
   const handleSignOut = async () => {
     await signOut({ callbackUrl: '/' });
   };
-
+  
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -70,23 +69,25 @@ export default function DashboardLayout({ author, children }: DashboardLayoutPro
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
-            {navigation.map((item) => {
-              const isActive = router.pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-600'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <item.icon className="w-5 h-5 mr-3" />
-                  {item.name}
-                </Link>
-              );
-            })}
+            {navigation
+              .filter(item => item.roles.includes((author.role || 'AUTHOR').toUpperCase()) || author.role === 'ADMIN')
+              .map(item => {
+                const isActive = router.pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-600'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5 mr-3" />
+                    {item.name}
+                  </Link>
+                );
+              })}
           </nav>
 
           {/* Sign Out */}
@@ -104,9 +105,7 @@ export default function DashboardLayout({ author, children }: DashboardLayoutPro
 
       {/* Main Content */}
       <div className="pl-64">
-        <main className="p-8">
-          {children}
-        </main>
+        <main className="p-8">{children}</main>
       </div>
     </div>
   );
