@@ -115,7 +115,12 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    include: { claps: true, bookmarks: { include: { post: true } }, readingGoals: true, achievements: true },
+    include: {
+      claps: true,
+      bookmarks: { include: { post: true } },
+      readingGoals: true,
+      achievements: true,
+    },
   });
   
   if (!user) return { redirect: { destination: '/auth/signin', permanent: false } };

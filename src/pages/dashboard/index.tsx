@@ -24,17 +24,17 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       },
     }
   );
-
+  
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) {
     return { redirect: { destination: '/auth/signin', permanent: false } };
   }
-
+  
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) {
     return { redirect: { destination: '/auth/signin', permanent: false } };
   }
-
+  
   if (user.role === 'USER') {
     return { redirect: { destination: '/dashboard/user', permanent: false } };
   }
@@ -44,7 +44,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   if (user.role === 'ADMIN') {
     return { redirect: { destination: '/dashboard/admin', permanent: false } };
   }
-
+  
   return { redirect: { destination: '/auth/signin', permanent: false } };
 };
 

@@ -6,8 +6,8 @@ import { UserIcon, UserGroupIcon, DocumentTextIcon } from '@heroicons/react/24/s
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface AdminDashboardProps {
-  author: { name?: string; image?: string | null; role?: string | null };
-  stats: { users: number; authors: number; posts: number };
+  author: { name ? : string;image ? : string | null;role ? : string | null };
+  stats: { users: number;authors: number;posts: number };
   users: any[];
   authors: any[];
 }
@@ -19,7 +19,7 @@ export default function AdminDashboard({ author, stats, users, authors }: AdminD
     { name: 'Posts', value: stats.posts },
   ];
   const COLORS = ['#6366F1', '#10B981', '#F59E0B'];
-
+  
   return (
     <DashboardLayout author={author}>
       <div className="space-y-8">
@@ -88,7 +88,7 @@ export default function AdminDashboard({ author, stats, users, authors }: AdminD
                 <tr key={a.id} className="border-t">
                   <td className="px-4 py-2">{a.name}</td>
                   <td className="px-4 py-2">{a.posts.length}</td>
-                  <td className="px-4 py-2">{a.followers.length}</td>
+                  <td className="px-4 py-2">{a.follows.length}</td>
                 </tr>
               ))}
             </tbody>
@@ -121,30 +121,29 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       },
     }
   );
-
+  
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) {
     return { redirect: { destination: '/auth/signin', permanent: false } };
   }
-
+  
   const admin = await prisma.user.findUnique({ where: { id: session.user.id } });
-
+  
   if (!admin || admin.role !== 'ADMIN') {
     return { redirect: { destination: '/dashboard', permanent: false } };
   }
-
+  
   const users = await prisma.user.findMany({ include: { claps: true, bookmarks: true } });
-  const authors = await prisma.user.findMany({
-    where: { role: 'AUTHOR' },
-    include: { posts: true, followers: true },
+  const authors = await prisma.author.findMany({
+    include: { posts: true, follows: true },
   });
-
+  
   const stats = {
     users: users.length,
     authors: authors.length,
     posts: authors.reduce((sum, a) => sum + a.posts.length, 0),
   };
-
+  
   return {
     props: {
       author: { name: admin.name, image: admin.image, role: admin.role },

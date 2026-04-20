@@ -6,8 +6,8 @@ import { DocumentTextIcon, EyeIcon, HandThumbUpIcon, UserGroupIcon } from '@hero
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface AuthorDashboardProps {
-  author: { name?: string; image?: string | null; role?: string | null };
-  stats: { totalPosts: number; totalViews: number; totalClaps: number; totalFollowers: number };
+  author: { name ? : string;image ? : string | null;role ? : string | null };
+  stats: { totalPosts: number;totalViews: number;totalClaps: number;totalFollowers: number };
   posts: any[];
 }
 
@@ -99,24 +99,25 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       },
     }
   );
-
+  
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return { redirect: { destination: '/auth/signin', permanent: false } };
-
-  const author = await prisma.user.findUnique({
+  
+  // Query Author model instead of User
+  const author = await prisma.author.findUnique({
     where: { id: session.user.id },
-    include: { posts: { orderBy: { publishedAt: 'desc' }, take: 5 }, followers: true, claps: true },
+    include: { posts: { orderBy: { publishedAt: 'desc' }, take: 5 }, follows: true },
   });
-
+  
   if (!author) return { redirect: { destination: '/auth/signin', permanent: false } };
-
+  
   const stats = {
     totalPosts: author.posts.length,
     totalViews: author.posts.reduce((sum, p) => sum + (p.views || 0), 0),
-    totalClaps: author.claps.length,
-    totalFollowers: author.followers.length,
+    totalClaps: author.posts.reduce((sum, p) => sum + (p.clapCount || 0), 0),
+    totalFollowers: author.follows.length,
   };
-
+  
   return {
     props: {
       author: { name: author.name, image: author.image, role: author.role },
