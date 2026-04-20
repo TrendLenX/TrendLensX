@@ -8,26 +8,30 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll: () => ctx.req.cookies,
+        getAll: async () =>
+          Object.entries(ctx.req.cookies).map(([name, value]) => ({ name, value })),
         setAll: (cookies) => {
           cookies.forEach(({ name, value }) => {
-            ctx.res.setHeader('Set-Cookie', `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`);
+            ctx.res.setHeader(
+              'Set-Cookie',
+              `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`
+            );
           });
         },
       },
     }
   );
-  
+
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) {
     return { redirect: { destination: '/auth/signin', permanent: false } };
   }
-  
+
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) {
     return { redirect: { destination: '/auth/signin', permanent: false } };
   }
-  
+
   if (user.role === 'USER') {
     return { redirect: { destination: '/dashboard/user', permanent: false } };
   }
@@ -37,7 +41,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   if (user.role === 'ADMIN') {
     return { redirect: { destination: '/dashboard/admin', permanent: false } };
   }
-  
+
   return { redirect: { destination: '/auth/signin', permanent: false } };
 };
 
