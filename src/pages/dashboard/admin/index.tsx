@@ -106,11 +106,14 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     {
       cookies: {
         getAll: async () =>
-          Object.entries(ctx.req.cookies).map(([name, value]) => ({ name, value })),
+          Object.entries(ctx.req.cookies).map(([name, value]) => ({
+            name,
+            value: value ?? "", // ensure always a string
+          })),
         setAll: (cookies) => {
           cookies.forEach(({ name, value }) => {
             ctx.res.setHeader(
-              'Set-Cookie',
+              "Set-Cookie",
               `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`
             );
           });
