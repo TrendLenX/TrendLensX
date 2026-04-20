@@ -1,5 +1,5 @@
 import { GetServerSideProps } from 'next';
-import { createServerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { prisma } from '@/lib/prisma';
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {

@@ -1,5 +1,5 @@
 import { GetServerSideProps } from 'next';
-import { createServerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import { prisma } from '@/lib/prisma';
 import { DocumentTextIcon, EyeIcon, HandThumbUpIcon, UserGroupIcon } from '@heroicons/react/24/solid';
