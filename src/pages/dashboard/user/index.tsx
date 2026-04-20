@@ -6,8 +6,8 @@ import { HandThumbUpIcon, BookmarkIcon, TrophyIcon } from '@heroicons/react/24/s
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface UserDashboardProps {
-  author: { name?: string; image?: string | null; role?: string | null };
-  stats: { claps: number; bookmarks: number };
+  author: { name ? : string;image ? : string | null;role ? : string | null };
+  stats: { claps: number;bookmarks: number };
   goals: any[];
   achievements: any[];
   bookmarks: any[];
@@ -91,21 +91,30 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get: (n) => ctx.req.cookies[n], set: (n,v) => ctx.res.setHeader('Set-Cookie',`${n}=${v}; Path=/; HttpOnly; SameSite=Lax`), remove: (n)=>ctx.res.setHeader('Set-Cookie',`${n}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`) } }
+    {
+      cookies: {
+        getAll: () => ctx.req.cookies,
+        setAll: (cookies) => {
+          cookies.forEach(({ name, value }) => {
+            ctx.res.setHeader('Set-Cookie', `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`);
+          });
+        },
+      },
+    }
   );
-
+  
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return { redirect: { destination: '/auth/signin', permanent: false } };
-
+  
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     include: { claps: true, bookmarks: { include: { post: true } }, readingGoals: true, achievements: true },
   });
-
+  
   if (!user) return { redirect: { destination: '/auth/signin', permanent: false } };
-
+  
   const stats = { claps: user.claps.length || 0, bookmarks: user.bookmarks.length || 0 };
-
+  
   return {
     props: {
       author: { name: user.name, image: user.image, role: user.role },

@@ -8,11 +8,12 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name) => ctx.req.cookies[name],
-        set: (name, value) =>
-          ctx.res.setHeader('Set-Cookie', `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`),
-        remove: (name) =>
-          ctx.res.setHeader('Set-Cookie', `${name}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`),
+        getAll: () => ctx.req.cookies,
+        setAll: (cookies) => {
+          cookies.forEach(({ name, value }) => {
+            ctx.res.setHeader('Set-Cookie', `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`);
+          });
+        },
       },
     }
   );
