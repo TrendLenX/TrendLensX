@@ -10,7 +10,7 @@
     "start": "next start",
     "prisma": "prisma",
     "seed": "ts-node prisma/seed.ts",
-    "lint": "next lint" 
+    "lint": "next lint"
   },
   "postinstall": "prisma generate",
   "dependencies": {
