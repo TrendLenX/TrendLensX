@@ -2,6 +2,7 @@ import type { AppProps } from 'next/app';
 import Head from 'next/head';
 import { DefaultSeo } from 'next-seo';
 import { SessionProvider } from 'next-auth/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import Layout from '@/components/Layout/Layout';
 import { SITE_CONFIG } from '@/lib/constants';
 import '@/styles/globals.css';
@@ -33,6 +34,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } }:
         <Layout>
           <Component {...pageProps} />
         </Layout>
+        <SpeedInsights />
       </UserProvider>
     </SessionProvider>
   );
