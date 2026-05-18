@@ -1,6 +1,7 @@
 modules = ["nodejs-20", "web"]
 [agent]
 expertMode = true
+stack = "BEST_EFFORT_FALLBACK"
 
 [nix]
 channel = "stable-25_05"
@@ -10,6 +11,7 @@ channel = "stable-25_05"
 [userenv.shared]
 NEXT_PUBLIC_SITE_URL = "https://b69ddf89-d4ec-4a26-955d-09d529c3a809-00-u7vis4aq2q52.worf.replit.dev"
 NEXT_PUBLIC_SITE_NAME = "TrendLensX"
+NEXTAUTH_URL = "https://b69ddf89-d4ec-4a26-955d-09d529c3a809-00-u7vis4aq2q52.worf.replit.dev"
 
 [workflows]
 runButton = "Project"
