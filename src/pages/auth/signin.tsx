@@ -1,45 +1,30 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { signIn } from 'next-auth/react';
 import SEOHead from '@/components/SEO/SEOHead';
-import { supabase } from '@/lib/supabase';
-import { useUser } from '@/context/UserContext'; // import context
 
 export default function SignIn() {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { setUser } = useUser(); // get context setter
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    // Step 1: Login with Supabase Auth
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+    const result = await signIn('credentials', {
       email: credentials.email,
       password: credentials.password,
+      redirect: false,
     });
 
-    if (signInError) {
-      setError('Invalid credentials');
+    if (result?.error) {
+      setError('Invalid email or password');
       setLoading(false);
       return;
-    }
-
-    const supabaseUser = data.user;
-
-    // Step 2: Fetch extended profile from Prisma via API route
-    try {
-      const response = await fetch(`/api/users/profile?id=${supabaseUser?.id}`);
-      if (response.ok) {
-        const profile = await response.json();
-        setUser(profile); // store in Context
-      }
-    } catch (err) {
-      console.error('Failed to fetch extended profile', err);
     }
 
     router.push('/');
@@ -49,7 +34,6 @@ export default function SignIn() {
   return (
     <>
       <SEOHead title="Sign In" description="Sign in to your TrendLensX account" />
-
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div>
@@ -67,6 +51,11 @@ export default function SignIn() {
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
                 {error}
+              </div>
+            )}
+            {router.query.message && (
+              <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded">
+                {router.query.message}
               </div>
             )}
             <div className="rounded-md shadow-sm -space-y-px">
@@ -95,7 +84,6 @@ export default function SignIn() {
                 />
               </div>
             </div>
-
             <div>
               <button
                 type="submit"

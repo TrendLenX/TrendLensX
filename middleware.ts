@@ -1,50 +1,29 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { prisma } from '@/lib/prisma';
+import { getToken } from 'next-auth/jwt';
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => req.cookies.getAll(),
-        setAll: (cookies) => {
-          cookies.forEach(({ name, value }) => {
-            res.cookies.set(name, value);
-          });
-        },
-      },
-    }
-  );
-  
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  if (!session?.user) {
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+  if (!token) {
     return NextResponse.redirect(new URL('/auth/signin', req.url));
   }
-  
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user) {
-    return NextResponse.redirect(new URL('/auth/signin', req.url));
-  }
-  
-  if (req.nextUrl.pathname.startsWith('/dashboard/admin') && user.role !== 'ADMIN') {
+
+  const role = (token.role as string) || 'user';
+
+  if (req.nextUrl.pathname.startsWith('/dashboard/admin') && role !== 'ADMIN' && role !== 'admin') {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
-  
-  if (req.nextUrl.pathname.startsWith('/dashboard/author') && user.role !== 'AUTHOR' && user.role !== 'ADMIN') {
+
+  if (req.nextUrl.pathname.startsWith('/dashboard/author') && role !== 'AUTHOR' && role !== 'author' && role !== 'ADMIN' && role !== 'admin') {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
-  
-  if (req.nextUrl.pathname.startsWith('/dashboard/user') && user.role !== 'USER' && user.role !== 'ADMIN') {
+
+  if (req.nextUrl.pathname.startsWith('/dashboard/user') && role !== 'USER' && role !== 'user' && role !== 'ADMIN' && role !== 'admin') {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
-  
-  return res;
+
+  return NextResponse.next();
 }
 
 export const config = {

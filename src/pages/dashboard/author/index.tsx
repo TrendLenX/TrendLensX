@@ -1,13 +1,14 @@
 import { GetServerSideProps } from 'next';
-import { createServerClient } from '@supabase/ssr';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import { prisma } from '@/lib/prisma';
 import { DocumentTextIcon, EyeIcon, HandThumbUpIcon, UserGroupIcon } from '@heroicons/react/24/solid';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface AuthorDashboardProps {
-  author: { name ? : string;image ? : string | null;role ? : string | null };
-  stats: { totalPosts: number;totalViews: number;totalClaps: number;totalFollowers: number };
+  author: { name?: string; image?: string | null; role?: string | null };
+  stats: { totalPosts: number; totalViews: number; totalClaps: number; totalFollowers: number };
   posts: any[];
 }
 
@@ -20,7 +21,6 @@ export default function AuthorDashboard({ author, stats, posts }: AuthorDashboar
           <p className="text-gray-600">Manage your posts and track performance metrics.</p>
         </header>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white shadow rounded-lg p-6 flex items-center space-x-4">
             <DocumentTextIcon className="h-8 w-8 text-indigo-600" />
@@ -40,7 +40,6 @@ export default function AuthorDashboard({ author, stats, posts }: AuthorDashboar
           </div>
         </div>
 
-        {/* Chart */}
         <section>
           <h2 className="text-xl font-bold mb-4">Views per Post</h2>
           <div className="bg-white shadow rounded-lg p-6">
@@ -55,7 +54,6 @@ export default function AuthorDashboard({ author, stats, posts }: AuthorDashboar
           </div>
         </section>
 
-        {/* Recent posts */}
         <section>
           <h2 className="text-xl font-bold mb-4">Recent Posts</h2>
           <table className="min-w-full bg-white shadow rounded-lg">
@@ -78,51 +76,36 @@ export default function AuthorDashboard({ author, stats, posts }: AuthorDashboar
 }
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: async () =>
-          Object.entries(ctx.req.cookies).map(([name, value]) => ({
-            name,
-            value: value ?? "", // ensure always a string
-          })),
-        setAll: (cookies) => {
-          cookies.forEach(({ name, value }) => {
-            ctx.res.setHeader(
-              "Set-Cookie",
-              `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`
-            );
-          });
-        },
-      },
-    }
-  );
-  
-  const { data: { session } } = await supabase.auth.getSession();
+  const session = await getServerSession(ctx.req, ctx.res, authOptions);
+
   if (!session?.user) return { redirect: { destination: '/auth/signin', permanent: false } };
-  
-  // Query Author model instead of User
-  const author = await prisma.author.findUnique({
-    where: { id: session.user.id },
+
+  const role = (session.user as any).role || '';
+  if (role !== 'author' && role !== 'AUTHOR' && role !== 'admin' && role !== 'ADMIN') {
+    return { redirect: { destination: '/dashboard', permanent: false } };
+  }
+
+  const dbUser = await prisma.user.findUnique({ where: { email: session.user.email! } });
+  if (!dbUser) return { redirect: { destination: '/auth/signin', permanent: false } };
+
+  const authorRecord = await prisma.author.findFirst({
+    where: { email: session.user.email! },
     include: { posts: { orderBy: { publishedAt: 'desc' }, take: 5 }, follows: true },
   });
-  
-  if (!author) return { redirect: { destination: '/auth/signin', permanent: false } };
-  
+
+  const posts = authorRecord?.posts || [];
   const stats = {
-    totalPosts: author.posts.length,
-    totalViews: author.posts.reduce((sum, p) => sum + (p.views || 0), 0),
-    totalClaps: author.posts.reduce((sum, p) => sum + (p.clapCount || 0), 0),
-    totalFollowers: author.follows.length,
+    totalPosts: posts.length,
+    totalViews: posts.reduce((sum, p) => sum + (p.views || 0), 0),
+    totalClaps: posts.reduce((sum, p) => sum + (p.clapCount || 0), 0),
+    totalFollowers: authorRecord?.follows?.length || 0,
   };
-  
+
   return {
     props: {
-      author: { name: author.name, image: author.image, role: author.role },
+      author: { name: session.user.name, image: session.user.image, role },
       stats,
-      posts: author.posts || [],
+      posts: JSON.parse(JSON.stringify(posts)),
     },
   };
 };

@@ -13,37 +13,19 @@ interface PostCardProps {
 export default function PostCard({ post, featured = false }: PostCardProps) {
   const author = authors.find(a => a.id === post.authorId);
   if (!author) return null;
-  
-  const SocialIcon = ({
-    href,
-    children,
-    label
-  }: { href: string;children: React.ReactNode;label: string }) => (
-    <a
-      href={href}
-      className="relative text-gray-400 hover:text-primary-600 transition-colors group"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      {children}
-      <span className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-        {label}
-      </span>
-    </a>
-  );
-  
+
   const socialIcons = author.social || {
     twitter: "https://twitter.com/fake",
     linkedin: "https://linkedin.com",
     github: "https://github.com",
     website: "https://example.com"
   };
-  
+
   if (featured) {
     return (
       <article className="card group">
-        <Link href={`/post/${post.slug}`}>
-          <div className="relative h-64 md:h-80 overflow-hidden">
+        <div className="relative h-64 md:h-80 overflow-hidden">
+          <Link href={`/post/${post.slug}`} className="block h-full">
             <Image
               src={post.coverImage}
               alt={post.title}
@@ -51,35 +33,55 @@ export default function PostCard({ post, featured = false }: PostCardProps) {
               className="object-cover group-hover:scale-105 transition-transform duration-300"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-              <span className={`category-badge ${getCategoryColor(post.category.slug)} mb-3`}>
-                {post.category.name}
-              </span>
+          </Link>
+          <div className="absolute bottom-0 left-0 right-0 p-6 text-white pointer-events-none">
+            <span className={`category-badge ${getCategoryColor(post.category.slug)} mb-3`}>
+              {post.category.name}
+            </span>
+            <Link href={`/post/${post.slug}`} className="pointer-events-auto">
               <h2 className="text-2xl md:text-3xl font-bold mb-2 group-hover:text-primary-300 transition-colors">
                 {post.title}
               </h2>
-              <p className="text-gray-200 mb-4 line-clamp-2">{post.excerpt}</p>
-              <div className="flex items-center space-x-4 text-sm text-gray-300">
-                <span className="flex items-center space-x-1">
-                  <User className="w-4 h-4" />
-                  <span>{author.name}</span>
-                  {socialIcons.twitter && <SocialIcon href={socialIcons.twitter} label="Twitter"><Twitter className="w-4 h-4" /></SocialIcon>}
-                  {socialIcons.linkedin && <SocialIcon href={socialIcons.linkedin} label="LinkedIn"><Linkedin className="w-4 h-4" /></SocialIcon>}
-                  {socialIcons.github && <SocialIcon href={socialIcons.github} label="GitHub"><Github className="w-4 h-4" /></SocialIcon>}
-                  {socialIcons.website && <SocialIcon href={socialIcons.website} label="Website"><Globe className="w-4 h-4" /></SocialIcon>}
-                </span>
-                <span className="flex items-center">
-                  <Clock className="w-4 h-4 mr-1" />
-                  {post.readTime} min read
-                </span>
-              </div>
+            </Link>
+            <p className="text-gray-200 mb-4 line-clamp-2">{post.excerpt}</p>
+            <div className="flex items-center space-x-4 text-sm text-gray-300 pointer-events-auto">
+              <span className="flex items-center space-x-1">
+                <User className="w-4 h-4" />
+                <span>{author.name}</span>
+              </span>
+              <span className="flex items-center space-x-2">
+                {socialIcons.twitter && (
+                  <a href={socialIcons.twitter} target="_blank" rel="noopener noreferrer" title="Twitter" className="text-gray-300 hover:text-white">
+                    <Twitter className="w-4 h-4" />
+                  </a>
+                )}
+                {socialIcons.linkedin && (
+                  <a href={socialIcons.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" className="text-gray-300 hover:text-white">
+                    <Linkedin className="w-4 h-4" />
+                  </a>
+                )}
+                {socialIcons.github && (
+                  <a href={socialIcons.github} target="_blank" rel="noopener noreferrer" title="GitHub" className="text-gray-300 hover:text-white">
+                    <Github className="w-4 h-4" />
+                  </a>
+                )}
+                {socialIcons.website && (
+                  <a href={socialIcons.website} target="_blank" rel="noopener noreferrer" title="Website" className="text-gray-300 hover:text-white">
+                    <Globe className="w-4 h-4" />
+                  </a>
+                )}
+              </span>
+              <span className="flex items-center">
+                <Clock className="w-4 h-4 mr-1" />
+                {post.readTime} min read
+              </span>
             </div>
           </div>
-        </Link>
+        </div>
       </article>
     );
   }
-  
+
   return (
     <article className="card group">
       <Link href={`/post/${post.slug}`}>
@@ -117,10 +119,26 @@ export default function PostCard({ post, featured = false }: PostCardProps) {
               className="rounded-full"
             />
             <span>{author.name}</span>
-            {socialIcons.twitter && <SocialIcon href={socialIcons.twitter} label="Twitter"><Twitter className="w-4 h-4" /></SocialIcon>}
-            {socialIcons.linkedin && <SocialIcon href={socialIcons.linkedin} label="LinkedIn"><Linkedin className="w-4 h-4" /></SocialIcon>}
-            {socialIcons.github && <SocialIcon href={socialIcons.github} label="GitHub"><Github className="w-4 h-4" /></SocialIcon>}
-            {socialIcons.website && <SocialIcon href={socialIcons.website} label="Website"><Globe className="w-4 h-4" /></SocialIcon>}
+            {socialIcons.twitter && (
+              <a href={socialIcons.twitter} target="_blank" rel="noopener noreferrer" title="Twitter" className="text-gray-400 hover:text-primary-600 transition-colors">
+                <Twitter className="w-4 h-4" />
+              </a>
+            )}
+            {socialIcons.linkedin && (
+              <a href={socialIcons.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" className="text-gray-400 hover:text-primary-600 transition-colors">
+                <Linkedin className="w-4 h-4" />
+              </a>
+            )}
+            {socialIcons.github && (
+              <a href={socialIcons.github} target="_blank" rel="noopener noreferrer" title="GitHub" className="text-gray-400 hover:text-primary-600 transition-colors">
+                <Github className="w-4 h-4" />
+              </a>
+            )}
+            {socialIcons.website && (
+              <a href={socialIcons.website} target="_blank" rel="noopener noreferrer" title="Website" className="text-gray-400 hover:text-primary-600 transition-colors">
+                <Globe className="w-4 h-4" />
+              </a>
+            )}
           </div>
           <span className="flex items-center">
             <Clock className="w-4 h-4 mr-1" />

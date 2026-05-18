@@ -15,21 +15,38 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: '*.replit.dev',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.replit.app',
+        port: '',
+        pathname: '/**',
+      },
     ],
-    unoptimized: false,
+    unoptimized: true,
   },
+  allowedDevOrigins: [
+    '*.replit.dev',
+    '*.replit.app',
+    '*.worf.replit.dev',
+    '*.riker.replit.dev',
+    '*.kirk.replit.dev',
+  ],
   async headers() {
     return [
       {
         source: '/:path*',
         headers: [
           { key: 'X-DNS-Prefetch-Control', value: 'on' },
-          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           { key: 'X-Frame-Options', value: 'ALLOWALL' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
-          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
         ],
       },
     ];

@@ -1,13 +1,14 @@
 import { GetServerSideProps } from 'next';
-import { createServerClient } from '@supabase/ssr';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import { prisma } from '@/lib/prisma';
 import { UserIcon, UserGroupIcon, DocumentTextIcon } from '@heroicons/react/24/solid';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface AdminDashboardProps {
-  author: { name ? : string;image ? : string | null;role ? : string | null };
-  stats: { users: number;authors: number;posts: number };
+  author: { name?: string; image?: string | null; role?: string | null };
+  stats: { users: number; authors: number; posts: number };
   users: any[];
   authors: any[];
 }
@@ -19,7 +20,7 @@ export default function AdminDashboard({ author, stats, users, authors }: AdminD
     { name: 'Posts', value: stats.posts },
   ];
   const COLORS = ['#6366F1', '#10B981', '#F59E0B'];
-  
+
   return (
     <DashboardLayout author={author}>
       <div className="space-y-8">
@@ -28,7 +29,6 @@ export default function AdminDashboard({ author, stats, users, authors }: AdminD
           <p className="text-gray-600">Manage users, authors, and site analytics.</p>
         </header>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white shadow rounded-lg p-6 flex items-center space-x-4">
             <UserIcon className="h-8 w-8 text-indigo-600" />
@@ -44,7 +44,6 @@ export default function AdminDashboard({ author, stats, users, authors }: AdminD
           </div>
         </div>
 
-        {/* Pie chart */}
         <section>
           <h2 className="text-xl font-bold mb-4">Site Overview</h2>
           <div className="bg-white shadow rounded-lg p-6">
@@ -61,7 +60,6 @@ export default function AdminDashboard({ author, stats, users, authors }: AdminD
           </div>
         </section>
 
-        {/* Users table */}
         <section>
           <h2 className="text-xl font-bold mb-4">Recent Users</h2>
           <table className="min-w-full bg-white shadow rounded-lg">
@@ -78,7 +76,6 @@ export default function AdminDashboard({ author, stats, users, authors }: AdminD
           </table>
         </section>
 
-        {/* Authors table */}
         <section>
           <h2 className="text-xl font-bold mb-4">Authors Overview</h2>
           <table className="min-w-full bg-white shadow rounded-lg">
@@ -100,56 +97,32 @@ export default function AdminDashboard({ author, stats, users, authors }: AdminD
 }
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: async () =>
-          Object.entries(ctx.req.cookies).map(([name, value]) => ({
-            name,
-            value: value ?? "", // ensure always a string
-          })),
-        setAll: (cookies) => {
-          cookies.forEach(({ name, value }) => {
-            ctx.res.setHeader(
-              "Set-Cookie",
-              `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`
-            );
-          });
-        },
-      },
-    }
-  );
-  
-  const { data: { session } } = await supabase.auth.getSession();
+  const session = await getServerSession(ctx.req, ctx.res, authOptions);
+
   if (!session?.user) {
     return { redirect: { destination: '/auth/signin', permanent: false } };
   }
-  
-  const admin = await prisma.user.findUnique({ where: { id: session.user.id } });
-  
-  if (!admin || admin.role !== 'ADMIN') {
+
+  const role = (session.user as any).role || '';
+  if (role !== 'admin' && role !== 'ADMIN') {
     return { redirect: { destination: '/dashboard', permanent: false } };
   }
-  
+
   const users = await prisma.user.findMany({ include: { claps: true, bookmarks: true } });
-  const authors = await prisma.author.findMany({
-    include: { posts: true, follows: true },
-  });
-  
+  const authors = await prisma.author.findMany({ include: { posts: true, follows: true } });
+
   const stats = {
     users: users.length,
     authors: authors.length,
     posts: authors.reduce((sum, a) => sum + a.posts.length, 0),
   };
-  
+
   return {
     props: {
-      author: { name: admin.name, image: admin.image, role: admin.role },
+      author: { name: session.user.name, image: session.user.image, role },
       stats,
-      users,
-      authors,
+      users: JSON.parse(JSON.stringify(users)),
+      authors: JSON.parse(JSON.stringify(authors)),
     },
   };
 };
