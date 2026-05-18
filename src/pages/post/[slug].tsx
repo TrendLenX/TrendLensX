@@ -1,4 +1,4 @@
-import { GetStaticPaths, GetStaticProps } from 'next';
+import { GetServerSideProps } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Clock, Calendar, Tag } from 'lucide-react';
@@ -13,23 +13,37 @@ import ArticleClapButton from '@/components/ArticleClapButton';
 import BookmarkButton from '@/components/BookmarkButton';
 import EstimatedReadingTime from '@/components/EstimatedReadingTime';
 import RelatedPosts from '@/components/RelatedPosts';
-import { getAllPosts, getPostBySlug, getRelatedPosts } from '@/lib/mdxPosts';
+import { getPostBySlug, getRelatedPosts, getAllPosts } from '@/lib/mdxPosts';
+import { prisma } from '@/lib/prisma';
 import { Post } from '@/types';
 import { formatDate, getCategoryColor } from '@/lib/utils';
 import { SITE_CONFIG } from '@/lib/constants';
 import { authors } from '@/data/authors';
+import { categories } from '@/data/mockData';
 
 interface PostPageProps {
   post: Post;
   mdxSource: MDXRemoteSerializeResult;
   relatedPosts: Post[];
+  authorName: string;
+  authorImage: string;
 }
 
-export default function PostPage({ post, mdxSource, relatedPosts }: PostPageProps) {
-  const author = authors.find(a => a.id === post.authorId);
+export default function PostPage({ post, mdxSource, relatedPosts, authorName, authorImage }: PostPageProps) {
+  const staticAuthor = authors.find(a => a.id === post.authorId);
+  const displayName = authorName || staticAuthor?.name || 'Unknown Author';
+  const displayImage = authorImage || staticAuthor?.image || '/images/branding/logo1.png';
   const postUrl = `${SITE_CONFIG.url}/post/${post.slug}`;
 
-  if (!author) return null;
+  const authorForCard = staticAuthor || {
+    id: post.authorId,
+    name: displayName,
+    slug: post.authorId,
+    role: 'Author',
+    bio: '',
+    image: displayImage,
+    social: {},
+  };
 
   return (
     <>
@@ -47,7 +61,7 @@ export default function PostPage({ post, mdxSource, relatedPosts }: PostPageProp
           tags: post.tags,
           publishedAt: post.publishedAt,
           updatedAt: post.updatedAt,
-          author: author.name,
+          author: displayName,
         }}
       />
 
@@ -75,13 +89,13 @@ export default function PostPage({ post, mdxSource, relatedPosts }: PostPageProp
               <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-6">
                 <div className="flex items-center space-x-2">
                   <Image
-                    src={author.image}
-                    alt={author.name}
+                    src={displayImage}
+                    alt={displayName}
                     width={40}
                     height={40}
                     className="rounded-full"
                   />
-                  <span className="font-medium text-gray-900">{author.name}</span>
+                  <span className="font-medium text-gray-900">{displayName}</span>
                 </div>
                 <span className="flex items-center">
                   <Calendar className="w-4 h-4 mr-1" />
@@ -130,7 +144,7 @@ export default function PostPage({ post, mdxSource, relatedPosts }: PostPageProp
 
             <div className="border-t pt-8 mb-8">
               <h3 className="text-lg font-semibold mb-4">About the Author</h3>
-              <AuthorCard author={author} />
+              <AuthorCard author={authorForCard as any} />
             </div>
 
             <RelatedPosts posts={relatedPosts} />
@@ -143,32 +157,73 @@ export default function PostPage({ post, mdxSource, relatedPosts }: PostPageProp
   );
 }
 
-export const getStaticPaths: GetStaticPaths = async () => {
-  const posts = getAllPosts();
-  const paths = posts.map((post) => ({
-    params: { slug: post.slug },
-  }));
-
-  return { paths, fallback: false };
-};
-
-export const getStaticProps: GetStaticProps = async ({ params }) => {
+export const getServerSideProps: GetServerSideProps = async ({ params }) => {
   const { serialize } = await import('next-mdx-remote/serialize');
   const slug = params?.slug as string;
-  const post = getPostBySlug(slug);
+
+  let post: Post | null = null;
+  let authorName = '';
+  let authorImage = '/images/branding/logo1.png';
+
+  post = getPostBySlug(slug);
+
+  if (!post) {
+    const dbPost = await prisma.post.findUnique({
+      where: { slug },
+      include: { category: true, author: true },
+    });
+
+    if (dbPost) {
+      const category = categories.find(c => c.slug === dbPost.category.slug) || {
+        id: dbPost.categoryId,
+        name: dbPost.category.name,
+        slug: dbPost.category.slug,
+        description: dbPost.category.description || '',
+        color: dbPost.category.color || 'bg-gray-500',
+      };
+
+      const wordCount = dbPost.wordCount || 0;
+      const readTimeNum = dbPost.readTime || Math.max(1, Math.ceil(wordCount / 200));
+
+      post = {
+        id: dbPost.id,
+        title: dbPost.title,
+        slug: dbPost.slug,
+        excerpt: dbPost.excerpt,
+        content: dbPost.content || '',
+        coverImage: dbPost.coverImage || 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&h=400&fit=crop',
+        publishedAt: dbPost.publishedAt.toISOString(),
+        updatedAt: dbPost.updatedAt?.toISOString(),
+        authorId: dbPost.authorId,
+        category,
+        tags: [],
+        readTime: readTimeNum,
+        readingTime: `${readTimeNum} min read`,
+        wordCount,
+        featured: dbPost.featured,
+      } as Post;
+
+      if (dbPost.author) {
+        authorName = dbPost.author.name;
+        authorImage = dbPost.author.image || '/images/branding/logo1.png';
+      }
+    }
+  }
 
   if (!post) {
     return { notFound: true };
   }
 
-  const mdxSource = await serialize(post.content);
+  const mdxSource = await serialize(post.content || '');
   const relatedPosts = getRelatedPosts(post.id, post.tags, post.category.slug);
 
   return {
-    props: { 
-      post: JSON.parse(JSON.stringify(post)), 
+    props: {
+      post: JSON.parse(JSON.stringify(post)),
       mdxSource,
-      relatedPosts: JSON.parse(JSON.stringify(relatedPosts))
+      relatedPosts: JSON.parse(JSON.stringify(relatedPosts)),
+      authorName,
+      authorImage,
     },
   };
 };
