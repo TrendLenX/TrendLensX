@@ -1,5 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// TrendLensX Prisma Schema - Production Grade
+// PostgreSQL via Supabase
 
 generator client {
   provider = "prisma-client-js"
@@ -10,83 +10,129 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  image     String?
-  role      String   @default("user")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  image         String?
+  password      String?  // bcrypt hashed, null for OAuth users
+  role          String   @default("user") // user | author | admin
+  bio           String?
+  website       String?
+  twitter       String?
+  frozen        Boolean  @default(false)
+  emailVerified DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
-  follows        Follow[]        @relation("UserFollows")
-  claps          Clap[]
-  bookmarks      Bookmark[]
-  comments       Comment[]
-  newsletterSubs NewsletterSub[]
-  readingGoals   ReadingGoal[]
-  achievements   UserAchievement[]
-  readingSessions ReadingSession[]
-  subscriptions  UserSubscription[]
-  payments       Payment[]
+  follows          Follow[]          @relation("UserFollows")
+  claps            Clap[]
+  bookmarks        Bookmark[]
+  comments         Comment[]
+  newsletterSubs   NewsletterSub[]
+  readingGoals     ReadingGoal[]
+  achievements     UserAchievement[]
+  readingSessions  ReadingSession[]
+  readingHistory   ReadingHistory[]
+  subscriptions    UserSubscription[]
+  payments         Payment[]
+  notifications    Notification[]    @relation("NotificationRecipient")
+  sentNotifs       Notification[]    @relation("NotificationSender")
+  commentLikes     CommentLike[]
+  accounts         Account[]
 
   @@map("users")
 }
 
+// NextAuth Account for OAuth providers
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
 model Author {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  role        String?
-  bio         String?
-  image       String?
-  email       String?  @unique
-  twitter     String?
-  linkedin    String?
-  github      String?
-  website     String?
-  followerCount Int     @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  role          String?
+  bio           String?
+  image         String?
+  email         String?  @unique
+  twitter       String?
+  linkedin      String?
+  github        String?
+  website       String?
+  followerCount Int      @default(0)
+  verified      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
-  posts       Post[]
-  follows     Follow[]
+  posts          Post[]
+  follows        Follow[]
   newsletterSubs NewsletterSub[]
 
   @@map("authors")
 }
 
 model Post {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   title         String
-  slug          String   @unique
+  slug          String    @unique
   excerpt       String
-  content       String?  // MDX content or reference
+  content       String?
   coverImage    String?
+  status        String    @default("published") // draft | published | scheduled | archived
+  scheduledAt   DateTime?
   publishedAt   DateTime
-  updatedAt     DateTime @updatedAt
+  updatedAt     DateTime  @updatedAt
   readTime      Int
   wordCount     Int?
-  featured      Boolean  @default(false)
-  views         Int      @default(0)
-  clapCount     Int      @default(0)
-  shares        Int      @default(0)
-  commentsCount Int      @default(0)
+  featured      Boolean   @default(false)
+  views         Int       @default(0)
+  clapCount     Int       @default(0)
+  shares        Int       @default(0)
+  commentsCount Int       @default(0)
+  trendingScore Float     @default(0)
+  isPremium     Boolean   @default(false)
+  canonicalUrl  String?
+  metaTitle     String?
+  metaDesc      String?
 
   // Relations
-  authorId      String
-  author        Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  categoryId    String
-  category      Category @relation(fields: [categoryId], references: [id])
-  tags          Tag[]
-  clapRecords   Clap[]
-  bookmarks     Bookmark[]
-  comments      Comment[]
-  analytics     PostAnalytics[]
+  authorId        String
+  author          Author          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  categoryId      String
+  category        Category        @relation(fields: [categoryId], references: [id])
+  tags            Tag[]
+  clapRecords     Clap[]
+  bookmarks       Bookmark[]
+  comments        Comment[]
+  analytics       PostAnalytics[]
   readingSessions ReadingSession[]
-  premiumContent PremiumContent?
+  readingHistory  ReadingHistory[]
+  premiumContent  PremiumContent?
+  notifications   Notification[]
 
+  @@index([status, publishedAt])
+  @@index([trendingScore])
+  @@index([authorId])
+  @@index([categoryId])
   @@map("posts")
 }
 
@@ -101,7 +147,7 @@ model Category {
   createdAt   DateTime @default(now())
 
   // Relations
-  posts       Post[]
+  posts Post[]
 
   @@map("categories")
 }
@@ -125,21 +171,20 @@ model Follow {
   createdAt   DateTime @default(now())
 
   // Relations
-  follower    User     @relation("UserFollows", fields: [followerId], references: [id], onDelete: Cascade)
-  following   Author   @relation(fields: [followingId], references: [id], onDelete: Cascade)
+  follower  User   @relation("UserFollows", fields: [followerId], references: [id], onDelete: Cascade)
+  following Author @relation(fields: [followingId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, followingId])
   @@map("follows")
 }
 
 model Clap {
-  id     String @id @default(cuid())
-  userId String
-  postId String
-  count  Int    @default(1)
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  count     Int      @default(1)
   createdAt DateTime @default(now())
 
-  // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
@@ -148,12 +193,11 @@ model Clap {
 }
 
 model Bookmark {
-  id     String @id @default(cuid())
-  userId String
-  postId String
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
   createdAt DateTime @default(now())
 
-  // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
@@ -172,25 +216,71 @@ model Comment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post     Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
-  replies  Comment[] @relation("CommentReplies")
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post    Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent  Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[]     @relation("CommentReplies")
+  likedBy CommentLike[]
 
+  @@index([postId])
   @@map("comments")
 }
 
-model PostAnalytics {
-  id            String   @id @default(cuid())
-  postId        String
-  date          DateTime @default(now())
-  views         Int      @default(0)
-  readComplete  Int      @default(0)
-  avgReadTime   Float?
-  socialShares  Int      @default(0)
+model CommentLike {
+  id        String   @id @default(cuid())
+  userId    String
+  commentId String
+  createdAt DateTime @default(now())
 
-  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+  @@map("comment_likes")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  recipientId String
+  senderId    String?
+  type        String   // new_comment | new_follower | clap | reply | mention | new_post
+  title       String
+  message     String?
+  postId      String?
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  recipient User  @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  sender    User? @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
+  post      Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, read])
+  @@map("notifications")
+}
+
+model ReadingHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  readAt    DateTime @default(now())
+  progress  Float    @default(0) // 0-1
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@map("reading_history")
+}
+
+model PostAnalytics {
+  id           String   @id @default(cuid())
+  postId       String
+  date         DateTime @default(now())
+  views        Int      @default(0)
+  readComplete Int      @default(0)
+  avgReadTime  Float?
+  socialShares Int      @default(0)
+
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([postId, date])
@@ -202,48 +292,46 @@ model NewsletterSub {
   email     String   @unique
   userId    String?
   authorId  String?
-  frequency String   @default("weekly") // daily, weekly, monthly
+  frequency String   @default("weekly") // daily | weekly | monthly
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  // Relations
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   author Author? @relation(fields: [authorId], references: [id])
 
   @@map("newsletter_subs")
 }
-model ReadingGoal {
-  id          String   @id @default(cuid())
-  userId      String
-  type        String   // daily, weekly, monthly
-  target      Int      // number of articles or minutes
-  metric      String   // articles, minutes
-  current     Int      @default(0)
-  completed   Boolean  @default(false)
-  startDate   DateTime
-  endDate     DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
-  // Relations
+model ReadingGoal {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String    // daily | weekly | monthly
+  target    Int
+  metric    String    // articles | minutes
+  current   Int       @default(0)
+  completed Boolean   @default(false)
+  startDate DateTime
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("reading_goals")
 }
 
 model Achievement {
-  id          String   @id @default(cuid())
+  id          String @id @default(cuid())
   name        String
   description String
   icon        String
-  category    String   // reading, engagement, streak, milestone
-  requirement Int      // threshold to unlock
-  metric      String   // articles_read, minutes_read, streak_days, etc.
-  rarity      String   @default("common") // common, rare, epic, legendary
-  points      Int      @default(10)
+  category    String
+  requirement Int
+  metric      String
+  rarity      String @default("common")
+  points      Int    @default(10)
   createdAt   DateTime @default(now())
 
-  // Relations
   userAchievements UserAchievement[]
 
   @@map("achievements")
@@ -255,7 +343,6 @@ model UserAchievement {
   achievementId String
   unlockedAt    DateTime @default(now())
 
-  // Relations
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
 
@@ -264,17 +351,16 @@ model UserAchievement {
 }
 
 model ReadingSession {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
   postId    String
   startTime DateTime
   endTime   DateTime?
-  duration  Int?     // in minutes
-  completed Boolean  @default(false)
-  progress  Float    @default(0) // 0-1 percentage
-  createdAt DateTime @default(now())
+  duration  Int?
+  completed Boolean   @default(false)
+  progress  Float     @default(0)
+  createdAt DateTime  @default(now())
 
-  // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
@@ -283,36 +369,34 @@ model ReadingSession {
 
 model SubscriptionPlan {
   id          String   @id @default(cuid())
-  name        String   // Basic, Premium, Pro
+  name        String
   description String?
-  price       Float    // Monthly price in USD
+  price       Float
   currency    String   @default("USD")
-  interval    String   @default("month") // month, year
-  features    String[] // JSON array of features
+  interval    String   @default("month")
+  features    String[]
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Relations
   subscriptions UserSubscription[]
 
   @@map("subscription_plans")
 }
 
 model UserSubscription {
-  id         String   @id @default(cuid())
-  userId     String
-  planId     String
-  status     String   @default("active") // active, canceled, expired, past_due
-  startDate  DateTime
-  endDate    DateTime?
-  autoRenew  Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String    @id @default(cuid())
+  userId    String
+  planId    String
+  status    String    @default("active") // active | canceled | expired | past_due
+  startDate DateTime
+  endDate   DateTime?
+  autoRenew Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan SubscriptionPlan @relation(fields: [planId], references: [id])
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan     SubscriptionPlan @relation(fields: [planId], references: [id])
   payments Payment[]
 
   @@unique([userId, planId])
@@ -320,19 +404,18 @@ model UserSubscription {
 }
 
 model Payment {
-  id            String   @id @default(cuid())
-  userId        String
+  id             String    @id @default(cuid())
+  userId         String
   subscriptionId String?
-  amount        Float
-  currency      String   @default("USD")
-  status        String   @default("pending") // pending, completed, failed, refunded
-  paymentMethod String   // stripe, paypal, etc.
-  transactionId String   @unique
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  amount         Float
+  currency       String    @default("USD")
+  status         String    @default("pending") // pending | completed | failed | refunded
+  paymentMethod  String
+  transactionId  String    @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscription UserSubscription? @relation(fields: [subscriptionId], references: [id])
 
   @@map("payments")
@@ -342,11 +425,10 @@ model PremiumContent {
   id          String   @id @default(cuid())
   postId      String   @unique
   isPremium   Boolean  @default(false)
-  previewText String?  // Preview content for non-premium users
+  previewText String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Relations
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@map("premium_content")

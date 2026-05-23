@@ -1,54 +1,174 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { users } from '@/data/users';
+import GoogleProvider from 'next-auth/providers/google';
+import bcrypt from 'bcryptjs';
+import { prisma } from '@/lib/prisma';
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    // Google OAuth
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [
+          GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          }),
+        ]
+      : []),
+
     CredentialsProvider({
       name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' }
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
+        if (!credentials?.email || !credentials?.password) return null;
 
-        const user = users.find(u => u.email === credentials.email && u.password === credentials.password);
+        try {
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+          });
 
-        if (user && !user.frozen) {
+          if (!user || user.frozen) return null;
+
+          // OAuth-only users (no password set)
+          if (!user.password) return null;
+
+          const passwordValid = await bcrypt.compare(credentials.password, user.password);
+          if (!passwordValid) return null;
+
           return {
             id: user.id,
             email: user.email,
             name: user.name,
+            image: user.image,
             role: user.role,
           };
+        } catch (err) {
+          console.error('Auth error:', err);
+          return null;
         }
-
-        return null;
-      }
-    })
+      },
+    }),
   ],
-  session: {
-    strategy: 'jwt',
-  },
+
+  session: { strategy: 'jwt' },
+
   callbacks: {
-    async jwt({ token, user }: any) {
-      if (user) {
-        token.role = user.role;
+    async signIn({ user, account }) {
+      // Handle Google OAuth - upsert user in DB
+      if (account?.provider === 'google' && user.email) {
+        try {
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email },
+          });
+
+          if (!existingUser) {
+            await prisma.user.create({
+              data: {
+                email: user.email,
+                name: user.name,
+                image: user.image,
+                role: 'user',
+                emailVerified: new Date(),
+              },
+            });
+          } else if (!existingUser.image && user.image) {
+            await prisma.user.update({
+              where: { id: existingUser.id },
+              data: { image: user.image },
+            });
+          }
+
+          // Upsert OAuth account link
+          if (account) {
+            const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+            if (dbUser) {
+              await prisma.account.upsert({
+                where: {
+                  provider_providerAccountId: {
+                    provider: account.provider,
+                    providerAccountId: account.providerAccountId,
+                  },
+                },
+                update: {
+                  access_token: account.access_token,
+                  refresh_token: account.refresh_token,
+                  expires_at: account.expires_at,
+                },
+                create: {
+                  userId: dbUser.id,
+                  type: account.type,
+                  provider: account.provider,
+                  providerAccountId: account.providerAccountId,
+                  access_token: account.access_token,
+                  refresh_token: account.refresh_token,
+                  expires_at: account.expires_at,
+                  token_type: account.token_type,
+                  scope: account.scope,
+                  id_token: account.id_token,
+                },
+              });
+            }
+          }
+        } catch (err) {
+          console.error('Google sign-in error:', err);
+          return false;
+        }
       }
+      return true;
+    },
+
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = (user as any).role;
+        token.id = user.id;
+      }
+
+      // Refresh role from DB on each token refresh
+      if (token.email && !user) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: token.email },
+            select: { id: true, role: true, frozen: true },
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+            token.id = dbUser.id;
+            if (dbUser.frozen) return { ...token, error: 'AccountFrozen' };
+          }
+        } catch {}
+      }
+
       return token;
     },
-    async session({ session, token }: any) {
-      if (token && token.sub) {
-        session.user.id = token.sub;
-        session.user.role = token.role;
+
+    async session({ session, token }) {
+      if (token && session.user) {
+        (session.user as any).id = token.id as string;
+        (session.user as any).role = token.role as string;
       }
       return session;
     },
   },
+
   pages: {
     signIn: '/auth/signin',
+    error: '/auth/error',
+  },
+
+  secret: process.env.NEXTAUTH_SECRET,
+
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
   },
 };
