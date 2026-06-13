@@ -1,0 +1,1 @@
+- [Password reset flow](password-reset.md) — token-based reset via nodemailer; falls back to console log when SMTP not configured

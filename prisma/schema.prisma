@@ -19,10 +19,12 @@ model User {
   bio           String?
   website       String?
   twitter       String?
-  frozen        Boolean  @default(false)
-  emailVerified DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  frozen            Boolean   @default(false)
+  emailVerified     DateTime?
+  resetToken        String?   @unique
+  resetTokenExpiry  DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   // Relations
   follows          Follow[]          @relation("UserFollows")
