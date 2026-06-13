@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web"]
+modules = ["nodejs-20", "web", "bash"]
 [agent]
 expertMode = true
 stack = "BEST_EFFORT_FALLBACK"
@@ -13,6 +13,8 @@ packages = ["gir-rs"]
 NEXT_PUBLIC_SITE_URL = "https://b69ddf89-d4ec-4a26-955d-09d529c3a809-00-u7vis4aq2q52.worf.replit.dev"
 NEXT_PUBLIC_SITE_NAME = "TrendLensX"
 NEXTAUTH_URL = "https://b69ddf89-d4ec-4a26-955d-09d529c3a809-00-u7vis4aq2q52.worf.replit.dev"
+RATE_LIMIT_MAX = "100"
+RATE_LIMIT_WINDOW_MS = "60000"
 
 [workflows]
 runButton = "Project"
