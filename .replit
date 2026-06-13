@@ -10,9 +10,9 @@ packages = ["gir-rs"]
 [userenv]
 
 [userenv.shared]
-NEXT_PUBLIC_SITE_URL = "https://b69ddf89-d4ec-4a26-955d-09d529c3a809-00-u7vis4aq2q52.worf.replit.dev"
+NEXT_PUBLIC_SITE_URL = "https://75a5acc6-eb68-4069-917e-3283cddd8979-00-34j8h3zxxqx3.picard.replit.dev"
 NEXT_PUBLIC_SITE_NAME = "TrendLensX"
-NEXTAUTH_URL = "https://b69ddf89-d4ec-4a26-955d-09d529c3a809-00-u7vis4aq2q52.worf.replit.dev"
+NEXTAUTH_URL = "https://75a5acc6-eb68-4069-917e-3283cddd8979-00-34j8h3zxxqx3.picard.replit.dev"
 RATE_LIMIT_MAX = "100"
 RATE_LIMIT_WINDOW_MS = "60000"
 

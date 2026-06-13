@@ -23,6 +23,9 @@ const nextConfig = {
     '*.worf.replit.dev',
     '*.riker.replit.dev',
     '*.kirk.replit.dev',
+    '*.picard.replit.dev',
+    '*.janeway.replit.dev',
+    '*.sisko.replit.dev',
   ],
   async headers() {
     return [
