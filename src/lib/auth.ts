@@ -6,12 +6,19 @@ import { prisma } from '@/lib/prisma';
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    // Google OAuth
+    // Google OAuth — only registered when credentials are present
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? [
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            authorization: {
+              params: {
+                prompt: 'consent',
+                access_type: 'offline',
+                response_type: 'code',
+              },
+            },
           }),
         ]
       : []),
@@ -31,8 +38,6 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user || user.frozen) return null;
-
-          // OAuth-only users (no password set)
           if (!user.password) return null;
 
           const passwordValid = await bcrypt.compare(credentials.password, user.password);
@@ -46,7 +51,7 @@ export const authOptions: NextAuthOptions = {
             role: user.role,
           };
         } catch (err) {
-          console.error('Auth error:', err);
+          console.error('[Auth] Credentials authorize error:', err);
           return null;
         }
       },
@@ -57,77 +62,112 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async signIn({ user, account }) {
-      // Handle Google OAuth - upsert user in DB
-      if (account?.provider === 'google' && user.email) {
+      // Only intercept Google OAuth — credentials flow is handled in authorize()
+      if (account?.provider !== 'google') return true;
+
+      if (!user.email) {
+        console.error('[Auth] Google sign-in: no email returned from Google');
+        return false;
+      }
+
+      console.log('[Auth] Google sign-in: processing for', user.email);
+
+      // Step 1 — look up or create the user
+      let dbUser: { id: string } | null = null;
+
+      try {
+        dbUser = await prisma.user.findUnique({
+          where: { email: user.email },
+          select: { id: true },
+        });
+        console.log('[Auth] Google sign-in: user lookup complete, found:', !!dbUser);
+      } catch (err) {
+        console.error('[Auth] Google sign-in: user lookup failed:', err);
+        return false;
+      }
+
+      if (!dbUser) {
         try {
-          const existingUser = await prisma.user.findUnique({
-            where: { email: user.email },
+          dbUser = await prisma.user.create({
+            data: {
+              email: user.email,
+              name: user.name ?? null,
+              image: user.image ?? null,
+              role: 'user',
+              emailVerified: new Date(),
+            },
+            select: { id: true },
           });
-
-          if (!existingUser) {
-            await prisma.user.create({
-              data: {
-                email: user.email,
-                name: user.name,
-                image: user.image,
-                role: 'user',
-                emailVerified: new Date(),
-              },
-            });
-          } else if (!existingUser.image && user.image) {
-            await prisma.user.update({
-              where: { id: existingUser.id },
-              data: { image: user.image },
-            });
-          }
-
-          // Upsert OAuth account link
-          if (account) {
-            const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
-            if (dbUser) {
-              await prisma.account.upsert({
-                where: {
-                  provider_providerAccountId: {
-                    provider: account.provider,
-                    providerAccountId: account.providerAccountId,
-                  },
-                },
-                update: {
-                  access_token: account.access_token,
-                  refresh_token: account.refresh_token,
-                  expires_at: account.expires_at,
-                },
-                create: {
-                  userId: dbUser.id,
-                  type: account.type,
-                  provider: account.provider,
-                  providerAccountId: account.providerAccountId,
-                  access_token: account.access_token,
-                  refresh_token: account.refresh_token,
-                  expires_at: account.expires_at,
-                  token_type: account.token_type,
-                  scope: account.scope,
-                  id_token: account.id_token,
-                },
-              });
-            }
-          }
+          console.log('[Auth] Google sign-in: new user created, id:', dbUser.id);
         } catch (err) {
-          console.error('Google sign-in error:', err);
+          console.error('[Auth] Google sign-in: user creation failed:', err);
           return false;
         }
+      } else {
+        // Backfill profile image if missing
+        if (!user.image) {
+          // nothing to update
+        } else {
+          try {
+            await prisma.user.update({
+              where: { id: dbUser.id },
+              data: { image: user.image },
+            });
+          } catch (err) {
+            // Non-fatal — just log it
+            console.warn('[Auth] Google sign-in: image backfill failed (non-fatal):', err);
+          }
+        }
       }
+
+      // Step 2 — link the OAuth account record
+      try {
+        await prisma.account.upsert({
+          where: {
+            provider_providerAccountId: {
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+            },
+          },
+          update: {
+            access_token: account.access_token,
+            refresh_token: account.refresh_token,
+            expires_at: account.expires_at,
+            id_token: account.id_token,
+          },
+          create: {
+            userId: dbUser.id,
+            type: account.type,
+            provider: account.provider,
+            providerAccountId: account.providerAccountId,
+            access_token: account.access_token,
+            refresh_token: account.refresh_token,
+            expires_at: account.expires_at,
+            token_type: account.token_type,
+            scope: account.scope,
+            id_token: account.id_token,
+            session_state: account.session_state ?? null,
+          },
+        });
+        console.log('[Auth] Google sign-in: account linked successfully');
+      } catch (err) {
+        console.error('[Auth] Google sign-in: account link failed:', err);
+        return false;
+      }
+
       return true;
     },
 
     async jwt({ token, user }) {
+      // On first sign-in, `user` is populated — stamp it into the token
       if (user) {
-        token.role = (user as any).role;
+        token.role = (user as any).role ?? 'user';
         token.id = user.id;
+        return token;
       }
 
-      // Refresh role from DB on each token refresh
-      if (token.email && !user) {
+      // On subsequent requests, refresh role + frozen status from DB
+      if (token.email) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { email: token.email },
@@ -136,9 +176,15 @@ export const authOptions: NextAuthOptions = {
           if (dbUser) {
             token.role = dbUser.role;
             token.id = dbUser.id;
-            if (dbUser.frozen) return { ...token, error: 'AccountFrozen' };
+            if (dbUser.frozen) {
+              console.warn('[Auth] JWT: account is frozen for', token.email);
+              return { ...token, error: 'AccountFrozen' };
+            }
           }
-        } catch {}
+        } catch (err) {
+          // Non-fatal: return existing token so the session doesn't break
+          console.error('[Auth] JWT refresh error (non-fatal):', err);
+        }
       }
 
       return token;
@@ -147,7 +193,10 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token && session.user) {
         (session.user as any).id = token.id as string;
-        (session.user as any).role = token.role as string;
+        (session.user as any).role = (token.role as string) ?? 'user';
+        if (token.error) {
+          (session as any).error = token.error;
+        }
       }
       return session;
     },
