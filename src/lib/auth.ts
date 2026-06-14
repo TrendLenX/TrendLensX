@@ -35,6 +35,7 @@ export const authOptions: NextAuthOptions = {
         try {
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
+            select: { id: true, email: true, name: true, image: true, role: true, password: true, frozen: true, emailVerified: true },
           });
 
           if (!user || user.frozen) return null;
@@ -43,6 +44,10 @@ export const authOptions: NextAuthOptions = {
           const passwordValid = await bcrypt.compare(credentials.password, user.password);
           if (!passwordValid) return null;
 
+          if (!user.emailVerified) {
+            throw new Error('EmailNotVerified');
+          }
+
           return {
             id: user.id,
             email: user.email,
@@ -50,7 +55,9 @@ export const authOptions: NextAuthOptions = {
             image: user.image,
             role: user.role,
           };
-        } catch (err) {
+        } catch (err: any) {
+          // Re-throw known errors so NextAuth can surface them to the client
+          if (err?.message === 'EmailNotVerified') throw err;
           console.error('[Auth] Credentials authorize error:', err);
           return null;
         }

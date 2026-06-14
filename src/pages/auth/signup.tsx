@@ -58,18 +58,8 @@ export default function SignUp({ hasGoogle }: SignUpProps) {
         return;
       }
 
-      // Auto sign in after registration
-      const result = await signIn('credentials', {
-        email: userData.email,
-        password: userData.password,
-        redirect: false,
-      });
-
-      if (result?.ok) {
-        router.push('/');
-      } else {
-        router.push('/auth/signin?message=Account created! Please sign in.');
-      }
+      // Redirect to check-email page — account requires email verification before sign-in
+      router.push(`/auth/check-email?email=${encodeURIComponent(userData.email)}`);
     } catch {
       setError('Network error. Please try again.');
       setLoading(false);

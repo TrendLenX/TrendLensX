@@ -1,36 +1,48 @@
 ---
-name: Password reset flow
-description: How the token-based password reset feature is implemented and what to know for future changes
+name: Auth flows — password reset + email verification
+description: Token-based password reset and email verification for credentials accounts
 ---
 
-# Password reset flow
+# Auth flows — password reset + email verification
 
-## Schema
-Two nullable fields added to `users` table via `prisma db push`:
-- `resetToken String? @unique` — 64-char hex token
-- `resetTokenExpiry DateTime?` — 1-hour TTL
+## Schema fields on `users` table
+- `resetToken String? @unique` + `resetTokenExpiry DateTime?` — 1-hour TTL
+- `verifyToken String? @unique` + `verifyTokenExpiry DateTime?` — 24-hour TTL
+- `emailVerified DateTime?` — already existed; set to `new Date()` on Google sign-up and on verify-email API success
 
-## Files
-- `src/lib/email.ts` — nodemailer transporter + HTML email builder
-- `src/pages/api/auth/forgot-password.ts` — generates token, writes to DB, sends email; always returns same success message (no user enumeration)
-- `src/pages/api/auth/reset-password.ts` — validates token + expiry, bcrypt-hashes new password, clears token fields
-- `src/pages/auth/forgot-password.tsx` — email input form with sent/error states
-- `src/pages/auth/reset-password.tsx` — password form with strength meter, show/hide toggle, confirm match validation
-- `src/pages/auth/signin.tsx` — "Forgot password?" link added next to Password label
+## Password reset files
+- `src/lib/email.ts` — nodemailer transporter + `buildPasswordResetEmail()` + `buildVerificationEmail()`
+- `src/pages/api/auth/forgot-password.ts` — token gen, email send, user-enumeration-safe response
+- `src/pages/api/auth/reset-password.ts` — token validation, bcrypt hash update, token cleanup
+- `src/pages/auth/forgot-password.tsx` — email input form
+- `src/pages/auth/reset-password.tsx` — password form with strength meter, show/hide, confirm match
+
+## Email verification files
+- `src/pages/api/auth/register.ts` — generates verifyToken on create, sends verification email, returns `{verificationSent: true, email}`
+- `src/pages/api/auth/verify-email.ts` — GET `?token=`, sets `emailVerified`, redirects to signin with success message or `/auth/verify-email?status=expired|invalid|error`
+- `src/pages/api/auth/resend-verification.ts` — POST `{email}`, regenerates token, resends email; safe response always
+- `src/pages/auth/check-email.tsx` — shown after registration; shows email address, resend button
+- `src/pages/auth/verify-email.tsx` — landing page for the link; handles expired/invalid/success states with resend form
+- `src/pages/auth/signup.tsx` — redirects to `/auth/check-email?email=...` after successful registration (no auto sign-in)
+- `src/pages/auth/signin.tsx` — detects `result.error === 'EmailNotVerified'`, shows amber banner with inline resend button
+
+## Key implementation detail — re-throwing in authorize()
+`src/lib/auth.ts` CredentialsProvider `authorize()` has a `try/catch`. The `throw new Error('EmailNotVerified')` must be **re-thrown** from the catch block, otherwise NextAuth silently swallows it and returns `null` (generic error). Pattern used:
+```ts
+} catch (err: any) {
+  if (err?.message === 'EmailNotVerified') throw err;
+  console.error('...'); return null;
+}
+```
+
+**Why:** NextAuth propagates the thrown Error message as `result.error` when `redirect: false`. Without re-throw, client gets `CredentialsSignin` instead of `EmailNotVerified`.
 
 ## Email behavior
-- If SMTP_HOST + SMTP_USER + SMTP_PASS are set → sends real email via nodemailer
-- If not set → logs reset link to server console (dev fallback, feature still usable)
-- SMTP_FROM controls the From address; falls back to SMTP_USER or noreply@trendlensx.com
-
-**Why:** Graceful dev fallback means the flow is fully testable without email config. The console log prints the full reset URL so developers can copy-paste it.
+- SMTP_HOST + SMTP_USER + SMTP_PASS configured → sends real email
+- Not configured → logs full URL to server console (dev fallback)
+- SMTP_FROM controls From address
 
 ## OAuth-only users
-Forgot-password silently skips users with `password: null` (Google-only accounts) and returns the same safe response. They must use Google sign-in.
-
-## Security design
-- Tokens are `crypto.randomBytes(32).toString('hex')` — 256 bits of entropy
-- Expiry: 1 hour
-- Token is cleared immediately on use (one-time)
-- Expired tokens are also cleared on attempt
-- Rate-limited via existing `authRateLimit` middleware
+- Google sign-in sets `emailVerified: new Date()` on account creation — no verification needed
+- Forgot-password silently skips users with `password: null`
+- Resend-verification silently skips users with `emailVerified` already set or `password: null`

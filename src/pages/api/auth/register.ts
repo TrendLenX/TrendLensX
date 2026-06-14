@@ -1,7 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { authRateLimit } from '@/lib/rateLimit';
+import { sendEmail, buildVerificationEmail } from '@/lib/email';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -37,6 +39,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+    const verifyTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     const user = await prisma.user.create({
       data: {
@@ -44,13 +48,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         email: email.toLowerCase(),
         password: hashedPassword,
         role: 'user',
+        verifyToken,
+        verifyTokenExpiry,
       },
       select: { id: true, name: true, email: true, role: true, createdAt: true },
     });
 
+    const host = req.headers.host;
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+    const verifyUrl = `${protocol}://${host}/api/auth/verify-email?token=${verifyToken}`;
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Verify your TrendLensX email address',
+      html: buildVerificationEmail(user.name ?? '', verifyUrl),
+    });
+
     return res.status(201).json({
-      message: 'Account created successfully',
-      user,
+      message: 'Account created. Please check your email to verify your account.',
+      verificationSent: true,
+      email: user.email,
     });
   } catch (error) {
     console.error('Registration error:', error);

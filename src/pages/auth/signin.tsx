@@ -12,8 +12,10 @@ interface SignInProps {
 export default function SignIn({ hasGoogle }: SignInProps) {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const router = useRouter();
   const { callbackUrl, message } = router.query;
 
@@ -21,12 +23,19 @@ export default function SignIn({ hasGoogle }: SignInProps) {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setUnverifiedEmail('');
 
     const result = await signIn('credentials', {
       email: credentials.email,
       password: credentials.password,
       redirect: false,
     });
+
+    if (result?.error === 'EmailNotVerified') {
+      setUnverifiedEmail(credentials.email);
+      setLoading(false);
+      return;
+    }
 
     if (result?.error) {
       setError('Invalid email or password');
@@ -45,6 +54,21 @@ export default function SignIn({ hasGoogle }: SignInProps) {
     });
   };
 
+  const handleResend = async () => {
+    if (!unverifiedEmail || resendState === 'sending' || resendState === 'sent') return;
+    setResendState('sending');
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: unverifiedEmail }),
+      });
+      setResendState(res.ok ? 'sent' : 'error');
+    } catch {
+      setResendState('error');
+    }
+  };
+
   return (
     <>
       <SEOHead title="Sign In" description="Sign in to your TrendLensX account" />
@@ -60,6 +84,29 @@ export default function SignIn({ hasGoogle }: SignInProps) {
           {message && (
             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
               {message}
+            </div>
+          )}
+
+          {unverifiedEmail && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-4 text-sm space-y-3">
+              <p className="font-semibold text-amber-800">Please verify your email</p>
+              <p className="text-amber-700">
+                We sent a verification link to <strong>{unverifiedEmail}</strong>. Check your inbox and click the link before signing in.
+              </p>
+              {resendState === 'sent' ? (
+                <p className="text-green-700 font-medium">✓ A new verification email has been sent.</p>
+              ) : (
+                <button
+                  onClick={handleResend}
+                  disabled={resendState === 'sending'}
+                  className="text-amber-800 underline font-medium hover:text-amber-900 disabled:opacity-50"
+                >
+                  {resendState === 'sending' ? 'Sending...' : 'Resend verification email'}
+                </button>
+              )}
+              {resendState === 'error' && (
+                <p className="text-red-600">Failed to resend. Please try again.</p>
+              )}
             </div>
           )}
 
