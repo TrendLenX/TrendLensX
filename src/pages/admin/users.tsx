@@ -212,6 +212,7 @@ export default function AdminUsers() {
             <div>
               <h1 className="text-2xl font-extrabold text-gray-900">User Management</h1>
               <p className="text-sm text-gray-500 mt-0.5">Manage accounts, roles, and access</p>
+              <a href="/admin/newsletter" className="text-xs text-indigo-500 hover:text-indigo-700 font-medium mt-1 inline-block">→ Newsletter subscribers</a>
             </div>
             <button
               onClick={() => { fetchUsers(); fetchStats(); }}

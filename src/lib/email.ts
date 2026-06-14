@@ -46,6 +46,60 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions): Promis
   }
 }
 
+export function buildNewsletterWelcomeEmail(email: string, unsubUrl: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to TrendLensX Newsletter</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#1e3a5f 0%,#4f46e5 100%);padding:36px 40px;text-align:center;">
+            <p style="margin:0;font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">TrendLens<span style="color:#818cf8;">X</span></p>
+            <p style="margin:8px 0 0;font-size:13px;color:#c7d2fe;">Your lens to trending topics</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:40px;">
+            <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">You&apos;re subscribed! 🎉</p>
+            <p style="margin:0 0 20px;font-size:15px;color:#6b7280;line-height:1.6;">
+              Welcome to the TrendLensX newsletter. You&apos;ll now receive the latest trends, insights, and opportunities delivered straight to your inbox — no spam, just valuable content.
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+              <tr>
+                <td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;">
+                  <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#374151;">What to expect:</p>
+                  <ul style="margin:0;padding-left:20px;font-size:13px;color:#6b7280;line-height:1.8;">
+                    <li>Breaking news and trending stories</li>
+                    <li>Finance and market updates</li>
+                    <li>Tech, education, sports &amp; lifestyle highlights</li>
+                    <li>Job listings and scholarship opportunities</li>
+                  </ul>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:24px 0 0;font-size:12px;color:#9ca3af;line-height:1.6;text-align:center;">
+              Not you? <a href="${unsubUrl}" style="color:#6366f1;">Unsubscribe instantly</a> — no questions asked.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f8fafc;padding:20px 40px;text-align:center;border-top:1px solid #e2e8f0;">
+            <p style="margin:0;font-size:12px;color:#9ca3af;">&copy; ${new Date().getFullYear()} TrendLensX. All rights reserved.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 export function buildVerificationEmail(name: string, verifyUrl: string): string {
   return `<!DOCTYPE html>
 <html lang="en">

@@ -1,121 +1,82 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
+import { sendEmail, buildNewsletterWelcomeEmail } from '@/lib/email';
+import { rateLimit } from '@/lib/rateLimit';
+
+const newsletterRateLimit = rateLimit({ limit: 5, windowMs: 60 * 60 * 1000 });
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // POST — subscribe
   if (req.method === 'POST') {
+    if (!newsletterRateLimit(req, res)) return;
+
+    const { email, frequency = 'weekly' } = req.body;
+
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    if (!EMAIL_REGEX.test(email.trim())) {
+      return res.status(400).json({ error: 'Invalid email address' });
+    }
+
+    const normalised = email.trim().toLowerCase();
+    const safeResponse = { message: 'Thanks! Check your inbox to confirm your subscription.' };
+
     try {
-      const { email, frequency = 'weekly' } = req.body;
-
-      if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
-      }
-
-      // Check if email is already subscribed
-      const existing = await prisma.newsletterSub.findUnique({
-        where: { email },
-      });
+      const existing = await prisma.newsletterSub.findUnique({ where: { email: normalised } });
 
       if (existing) {
-        return res.status(400).json({ error: 'Email already subscribed' });
+        if (existing.active) {
+          // Silent success — don't leak subscription status
+          return res.status(200).json(safeResponse);
+        }
+        // Re-activate a previously unsubscribed address
+        await prisma.newsletterSub.update({
+          where: { email: normalised },
+          data: { active: true, frequency },
+        });
+        return res.status(200).json(safeResponse);
       }
 
-      // Create subscription
-      const subscription = await prisma.newsletterSub.create({
-        data: {
-          email,
-          frequency,
-        },
+      const unsubToken = crypto.randomBytes(24).toString('hex');
+
+      await prisma.newsletterSub.create({
+        data: { email: normalised, frequency, unsubToken },
       });
 
-      return res.status(201).json({
-        message: 'Successfully subscribed to newsletter',
-        subscription,
+      // Build unsubscribe URL
+      const host = req.headers.host;
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+      const unsubUrl = `${protocol}://${host}/newsletter/unsubscribe?token=${unsubToken}`;
+
+      await sendEmail({
+        to: normalised,
+        subject: 'Welcome to TrendLensX newsletter! 🎉',
+        html: buildNewsletterWelcomeEmail(normalised, unsubUrl),
       });
-    } catch (error) {
-      console.error('Error subscribing to newsletter:', error);
-      return res.status(500).json({ error: 'Failed to subscribe' });
+
+      return res.status(201).json(safeResponse);
+    } catch (err) {
+      console.error('[newsletter/subscribe] Error:', err);
+      return res.status(500).json({ error: 'Failed to subscribe. Please try again.' });
     }
   }
 
+  // DELETE — unsubscribe by email (legacy / user dashboard)
   if (req.method === 'DELETE') {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
     try {
-      const { email } = req.body;
-
-      if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
-      }
-
       await prisma.newsletterSub.updateMany({
-        where: { email },
+        where: { email: email.toLowerCase() },
         data: { active: false },
       });
-
       return res.status(200).json({ message: 'Successfully unsubscribed' });
-    } catch (error) {
-      console.error('Error unsubscribing:', error);
+    } catch (err) {
+      console.error('[newsletter/unsubscribe] Error:', err);
       return res.status(500).json({ error: 'Failed to unsubscribe' });
-    }
-  }
-
-  // GET method for authenticated users to manage their subscription
-  const session = await getServerSession(req, res, authOptions);
-
-  if (!session?.user?.email) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  if (req.method === 'GET') {
-    try {
-      const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-      });
-
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const subscription = await prisma.newsletterSub.findFirst({
-        where: { userId: user.id, active: true },
-      });
-
-      return res.status(200).json({ subscription });
-    } catch (error) {
-      console.error('Error fetching subscription:', error);
-      return res.status(500).json({ error: 'Failed to fetch subscription' });
-    }
-  }
-
-  if (req.method === 'PUT') {
-    try {
-      const { frequency } = req.body;
-      const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-      });
-
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const subscription = await prisma.newsletterSub.upsert({
-        where: { email: session.user.email },
-        update: {
-          frequency,
-          active: true,
-          userId: user.id,
-        },
-        create: {
-          email: session.user.email,
-          frequency,
-          userId: user.id,
-        },
-      });
-
-      return res.status(200).json({ subscription });
-    } catch (error) {
-      console.error('Error updating subscription:', error);
-      return res.status(500).json({ error: 'Failed to update subscription' });
     }
   }
 

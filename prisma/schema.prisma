@@ -292,13 +292,14 @@ model PostAnalytics {
 }
 
 model NewsletterSub {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  userId    String?
-  authorId  String?
-  frequency String   @default("weekly") // daily | weekly | monthly
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  email       String   @unique
+  userId      String?
+  authorId    String?
+  frequency   String   @default("weekly") // daily | weekly | monthly
+  active      Boolean  @default(true)
+  unsubToken  String?  @unique
+  createdAt   DateTime @default(now())
 
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   author Author? @relation(fields: [authorId], references: [id])
