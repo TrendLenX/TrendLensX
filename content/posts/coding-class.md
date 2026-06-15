@@ -1,0 +1,61 @@
+---
+title: "TrendLensX Launches Free HTML & CSS Coding Class"
+slug: "coding-class"
+category: "education"
+excerpt: "TrendLensX invites beginners to join a free HTML & CSS class and learn how to build their first website from scratch."
+author: "Maruf O. Quadri"
+authorId: "maruf-quadri"
+date: "2026-06-15"
+featuredImage: "/images/posts/trendlensx-coding-class.jpg"
+tags: ["Coding", "Web Development", "Education", "TrendLensX"]
+featured: true
+---
+
+> **Table of Contents**
+> - [About the Class](#about-the-class)
+> - [What You’ll Learn](#what-youll-learn)
+> - [How to Join](#how-to-join)
+> - [Final Note](#final-note)
+
+---
+
+## <a id="about-the-class"></a>About the Class
+
+Ever wondered how websites are built? You hear people say “I’m a tech bro 💻” or “I’m a tech sis 👩‍💻” and wish you could relate — now you can!
+
+TrendLensX is launching a **FREE HTML & CSS Starter Class** to help you build your first website from scratch. Whether you’re a student, creative, or entrepreneur, this is your chance to learn the basics of web development in a fun, beginner‑friendly way.
+
+![TrendLensX Free Coding Class Invitation](/images/posts/trendlensx-coding-class-poster.jpg)
+
+---
+
+## <a id="what-youll-learn"></a>What You’ll Learn
+
+- **HTML Fundamentals** — structure your web pages with headings, links, and images.  
+- **CSS Styling** — make your site look beautiful with colors, fonts, and layouts.  
+- **Hands‑on Project** — create your own mini website to showcase your skills.  
+
+No prior experience needed — just curiosity and a willingness to learn!
+
+---
+
+## <a id="how-to-join"></a>How to Join
+
+✅ **Step 1:** Read full details about the class  
+📖 [http://trendlensx.vercel.app/coding_class](http://trendlensx.vercel.app/coding_class)
+
+✅ **Step 2:** Register and fill the form  
+👉 [http://trendlensx.vercel.app/coding_class/registration](http://trendlensx.vercel.app/coding_class/registration)
+
+✅ **Step 3:** Join our WhatsApp community  
+💬 [https://chat.whatsapp.com/DJ3zEO7Xw0TLIaFZYhFfa7](https://chat.whatsapp.com/DJ3zEO7Xw0TLIaFZYhFfa7)
+
+Limited slots available — don’t miss out!
+
+---
+
+## <a id="final-note"></a>Final Note
+
+TrendLensX is all about helping you **see the future and code the future**. This free class is your first step toward becoming part of the digital revolution.
+
+---
